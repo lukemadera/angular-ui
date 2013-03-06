@@ -1,7 +1,8 @@
 /**
 @todo
-- for scrolling loading more, remove "load more" button at bottom BUT auto load until get a scroll bar (otherwise could never trigger it?). And the programmer should call this directive with enough items to populate 1 page to show a scroll bar the first time (so add that to this documenation & also document that they should add a height & overflow:auto to ui-lookup-content in css for it to scroll)
 - style it (just the search box, load more button, etc.?)
+- allow optional scope attrs?? i.e. searchText, watchItemKeys, loadMore aren't really necesssary and the logic handles this but the directive throws an error if they're not defined and unit-testing fails.. so just need to figure out syntax / compiler way to allow this..
+
 
 Uses one associative array (raw data) to build a concatenated scalar (final/display) array of items to search / filter.
 	- handles paging / loading more when scroll to bottom
@@ -21,23 +22,22 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 //6. $scope.loadMoreDir
 //7. getMoreItems
 //8. addLoadMoreItems
+//9. checkForScrollBar
 
-attrs
+scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
 	REQUIRED
-	searchText {String} text to search for (will be used as ng-model for input)
-	watchItemKeys =array [] of keys to $watch; if these are updated in $scope (i.e. outside the directive), it will re-form itemsFiltered in the directive
-		DEFAULT: ['default']
 	itemsRaw =array {} of arrays {}, one per each "type". Each type must contain an "items" field that's a scalar array of the items for this type
+		NOTE: itemsRaw MUST have this structure and at least the 'main' key
 		EXAMPLE:
 		{
-			'default':{
+			'main':{
 				'items':[
 					{'first':'john', 'last':'smith'},
 					{'first':'joe', 'last':'bob'},
 					..
 				],
 			}
-			'loadMore':{
+			'extra':{
 				'items':[
 					{'first':'sally', 'last':'sue'},
 					{'first':'barbara', 'last':'ann'},
@@ -50,18 +50,26 @@ attrs
 		EXAMPLE: ['first', 'last', 'header.title']
 			NOTE: 'header.title' will search in header['title'] if filterFieldsDotNotation is set to true. Otherwise it will look in a NON-NESTED key that has a "." as part of it
 				i.e. array['header.title'] VS array['header']['title']
+	searchText {String} text to search for (will be used as ng-model for input)
+	watchItemKeys =array [] of keys to $watch; if these are updated in $scope (i.e. outside the directive), it will re-form itemsFiltered in the directive
+		DEFAULT: ['main']
+	loadMore =function to call to load more results (this should update $scope.itemsRaw, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
+
+attrs
+	REQUIRED
 	OPTIONAL
 	filterFieldsDotNotation =boolean true to change all periods to sub array's (i.e. so 'header.title' as a filterField would search in header['title'] for a match)
 		DEFAULT: true
 	scrollLoad =1 to do paging via scrolling
 		DEFAULT: 0
-	loadMore =function to call to load more results (this should update $scope.itemsRaw, which will then update in the directive via $watch)
+	pageScroll =1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
+		DEFAULT: 0
 	pageSize =int of how many results to show at a time (will load more in increments of pageSize as scroll down / click "more")
 		DEFAULT: 10
 	loadMorePageSize =int of how many results to load (& thus store in queue) at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
 		DEFAULT: 20
-	loadMoreItemsKey =string that matches a key in the itemsRaw array - this is where items from backend will loaded into
-		DEFAULT: loadMore
+	loadMoreItemsKey =string that matches a key in the itemsRaw array - this is where items from backend will be loaded into
+		DEFAULT: extra
 	placeholder =string of input search placeholder (default "search")
 	//id =string of instance id for this copy of the directive
 
@@ -78,11 +86,11 @@ partial / html:
 
 controller / js:
 	$scope.searchText ='';
-	$scope.watchItemKeys =['default'];
+	$scope.watchItemKeys =['main'];
 	$scope.users =[];
 	$scope.filterFields =['name'];
 	$scope.usersRaw ={
-		'default':{
+		'main':{
 			'items':[
 				{'_id':'d1', 'name':'john smith'},
 				{'_id':'d2', 'name':'joe bob'},
@@ -92,7 +100,7 @@ controller / js:
 				{'_id':'d6', 'name':'steve balls'},
 			],
 		},
-		'loadMore':{
+		'extra':{
 			'items':[
 			],
 		},
@@ -196,20 +204,20 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			filterFields:'=',
 			watchItemKeys:'=',		//note: this is not required & will throw an error if not set but it still works? @todo fix this so it's not required & doesn't throw error?
 			loadMore:'&',
-			searchText:'=',
+			searchText:'='
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'placeholder':'search', 'scrollLoad':'0', 'loadMorePageSize':20, 'loadMoreItemsKey':'loadMore', 'filterFieldsDotNotation':true};
+			var defaults ={'pageSize':10, 'placeholder':'search', 'scrollLoad':'0', 'loadMorePageSize':20, 'loadMoreItemsKey':'extra', 'filterFieldsDotNotation':true, 'pageScroll':0};
 			for(var xx in defaults) {
 				if(attrs[xx] ==undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}
 			//convert to int
-			attrs.pageSize =parseInt(attrs.pageSize);
-			attrs.loadMorePageSize =parseInt(attrs.loadMorePageSize);
-			attrs.scrollLoad =parseInt(attrs.scrollLoad);
+			attrs.pageSize =parseInt(attrs.pageSize, 10);
+			attrs.loadMorePageSize =parseInt(attrs.loadMorePageSize, 10);
+			attrs.scrollLoad =parseInt(attrs.scrollLoad, 10);
 			//ensure loadMorePageSize is at least as large as pageSize
 			if(attrs.loadMorePageSize <attrs.pageSize) {
 				attrs.loadMorePageSize =attrs.pageSize;
@@ -222,66 +230,31 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				'input':id1+"Input",
 				'contentBottom':id1+"ContentBottom",
 				'inputBelow':id1+"InputBelow",
-				'scrollContent':id1+"ScrollContent",
+				'scrollContent':id1+"ScrollContent"
 			};
 			
-			if(0) {
-			//NOTE: really weird behavior here; only the FIRST ng-[x] handler works; everything after that doesn't.. so have to give everything else id's (at least the parent elements) then $compile them each in link function..
-			var html ="";
-			html+="<div class='ui-lookup-top'>";		//this is NECESSARY to ensure all ng-[x] handlers work; only the first parent works without manually compiling pieces in link function so have to wrap this in a container so everything inside of it will work..
-				html+="<div class='ui-lookup-input-div'>"+
-					//"<input id='"+attrs.ids.input+"' type='text' ng-change='filterItems({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='searchText' ng-click='clickInput({})' ng-change='changeInput({})' />"+
-					"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='searchText' ng-click='clickInput({})' />"+
-				"</div>"+
-				//"<div id='"+attrs.ids.inputBelow+"'>"+
-					//"<div ng-click='testFxn({})'>ng-click test</div>"+		//TESTING
-					"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
-					"<div ng-show='itemsFiltered.length <1'>No matches</div>";
-				//"</div>";
-					//html+="<div id='yes' class='ui-lookup-more' ng-click='loadMoreDir({})'>Load More</div>";
-			html+="</div>";
-			
-			var htmlContentBottom ="<div id='"+attrs.ids.contentBottom+"'>"+
-				"<div ng-hide='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-more' ng-click='loadMoreDir({})'>Load More</div>"+
-				"<div ng-show='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-no-more'>No More Results!</div>"+
-			"</div>";
-			//htmlEnd+="</div>";
-			
-			//element.replaceWith(html);
-			element.replaceWith(html+"<div id='"+attrs.ids.scrollContent+"' class='ui-lookup-content'>"+element.html()+htmlContentBottom+"</div>");
-			//element.parent().after(htmlEnd);
-			
-			return function(scope, element, attrs) {
-				//NOTE: really weird behavior here; only the FIRST ng-[x] handler works; everything after that doesn't.. so have to give everything else id's (at least the parent elements) then $compile them each in link function..
-				$compile($("#"+attrs.ids.contentBottom))(scope);
-				//$compile($("#"+attrs.ids.inputBelow))(scope);
-				//$compile($(".ui-lookup-top"))(scope);
-			};
-			}
-			
-			else {
 			var html="<div class='ui-lookup'>"+
 				"<div class='ui-lookup-top'>"+
 					"<div class='ui-lookup-input-div'>"+
 						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='searchText' ng-click='clickInput({})' />"+
 					"</div>"+
-					"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
+					//"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
+					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-lookup-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-more' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div ng-hide='(noMoreLoadMoreItems && queuedItems.length <1) || (scrollLoad && hasScrollbar)' class='ui-lookup-more' ng-click='loadMoreDir({})'>Load More</div>"+
 					"<div ng-show='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-no-more'>No More Results!</div>"+
 				"</div>"+
 			"</div>";
 				
 			element.replaceWith(html);
-			}
 		},
 		
 		controller: function($scope, $element, $attrs) {
 			var defaults ={
-				'watchItemKeys':['default'],
+				'watchItemKeys':['main']
 			};
 			for(var xx in defaults) {
 				if($scope[xx] ==undefined) {
@@ -298,9 +271,32 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			$scope.totFilteredItems =0;
 			$scope.queuedItems =[];		//will hold load more items (i.e. from backend) so can always load at least a page ahead and be fast; i.e. when need to display more items, will just load them from queue (without AJAXing / talking to backend) and THEN after displaying (& removing from queue) the new items, IF still don't have enough for the NEXT page, THEN go to backend to preload the next page's worth of items. This way the AJAXing happens AFTER each page is loaded so it should be ready for the next page as opposed to BEFORE (in which case there's a lag while waiting for the items to return)
 			var cursors ={		//will hold cursors for items to know where to append to / load more from
-				'loadMore':0,
+				//'extra':0,
 			};
+			cursors[$attrs.loadMoreItemsKey] =0;
+			if($scope.itemsRaw[$attrs.loadMoreItemsKey] ==undefined) {
+				$scope.itemsRaw[$attrs.loadMoreItemsKey] ={
+					'items':[]
+				};
+			}
+			$scope.itemsRaw[$attrs.loadMoreItemsKey].items =[];
 			$scope.noMoreLoadMoreItems =false;		//boolean that will be set to true if (backend) has no more items (i.e. we're at the end of the list and can't load any more)
+			$scope.scrollLoad =$attrs.scrollLoad;
+			
+			//if scroll load style, ensure attrs.ids.scrollContent has scrollable styles (height & overflow)
+			if($scope.scrollLoad) {
+				if(!$attrs.pageScroll) {
+					var ele1 =document.getElementById($attrs.ids.scrollContent);
+					eleAng =angular.element(ele1);
+					var height1 =eleAng.css('height');
+					var overflow1 =eleAng.css('overflow');
+					if(!height1 || !overflow1) {
+						eleAng.addClass('ui-lookup-content-scroll');
+					}
+				}
+				
+				$scope.hasScrollbar =false;		//init
+			}
 			
 			$scope.testFxn =function(params) {
 				alert("test");
@@ -309,12 +305,12 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			var timeoutInfo ={
 				'search': {
 					'trig':false,
-					'delay':750,
+					'delay':750
 				},
 				'scrolling':{
 					'trig':false,
-					'delay':750,
-				},
+					'delay':750
+				}
 			};
 			
 			/*
@@ -329,22 +325,45 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			
 			//add scroll handle to load more
 			if($attrs.scrollLoad) {
-				document.getElementById($attrs.ids.scrollContent).onscroll =function() {
-					$timeout.cancel(timeoutInfo.scrolling.trig);
-					$timeout.cancel(timeoutInfo.search.trig);
-					timeoutInfo.scrolling.trig =$timeout(function() {
-						//console.log('uiLookup timeout scrolling loading');
-						var buffer =25;
-						var ele =document.getElementById($attrs.ids.scrollContent);
-						var scrollPos =ele.scrollTop;
-						var scrollHeight =ele.scrollHeight;
-						var height1 =$(ele).height();
-						//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+height1);
-						if(scrollPos >=(scrollHeight-height1-buffer)) {
-							$scope.loadMoreDir({'noDelay':true});
-						}
-					}, timeoutInfo.scrolling.delay);
-				};
+				if($attrs.pageScroll) {
+					window.onscroll =function() {
+						$timeout.cancel(timeoutInfo.scrolling.trig);
+						timeoutInfo.scrolling.trig =$timeout(function() {
+							//console.log('uiLookup timeout scrolling loading');
+							var buffer =25;
+							var scrollPos =$(window).scrollTop();
+							var scrollHeight =$(document).height();
+							var viewportHeight =$(window).height();
+							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+viewportHeight);
+							if(scrollPos >=(scrollHeight-viewportHeight-buffer)) {
+								$scope.loadMoreDir({'noDelay':true, 'next':true});
+							}
+							//prev version
+							if(scrollPos <=buffer) {
+								$scope.loadMoreDir({'noDelay':true, 'prev':true});
+							}
+						}, timeoutInfo.scrolling.delay);
+					};
+				}
+				else {
+					document.getElementById($attrs.ids.scrollContent).onscroll =function() {
+						$timeout.cancel(timeoutInfo.scrolling.trig);
+						$timeout.cancel(timeoutInfo.search.trig);
+						timeoutInfo.scrolling.trig =$timeout(function() {
+							//console.log('uiLookup timeout scrolling loading');
+							var buffer =25;
+							var ele =document.getElementById($attrs.ids.scrollContent);
+							var scrollPos =ele.scrollTop;
+							var scrollHeight =ele.scrollHeight;
+							//var height1 =$(ele).height();
+							var height1 =ele.clientHeight;
+							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+height1);
+							if(scrollPos >=(scrollHeight-height1-buffer)) {
+								$scope.loadMoreDir({'noDelay':true});
+							}
+						}, timeoutInfo.scrolling.delay);
+					};
+				}
 			}
 			
 			//0.5.
@@ -358,13 +377,16 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			//0.75.
 			function resetItems(params) {
 				$scope.page =1;		//reset
+				checkForScrollBar({});
 				$scope.noMoreLoadMoreItems =false;
 				$scope.queuedItems =[];
 				cursors ={
-					'loadMore':0,
+					//'extra':0,
 				};
+				cursors[$attrs.loadMoreItemsKey] =0;
 				$scope.itemsRaw[$attrs.loadMoreItemsKey].items =[];
-				$("#"+$attrs.ids.scrollContent).scrollTop(0);
+				document.getElementById($attrs.ids.scrollContent).scrollTop =0;
+				//$("#"+$attrs.ids.scrollContent).scrollTop(0);
 			}
 			
 			//1.
@@ -436,6 +458,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				}
 				$scope.totFilteredItems =$scope.itemsFiltered.length;
 				$scope.itemsFiltered =$scope.itemsFiltered.slice(0, $scope.page*$attrs.pageSize);
+				checkForScrollBar({});
 			};
 			
 			//3.
@@ -474,11 +497,14 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				var xx =$scope.watchItemKeys[ii];
 				//$scope.$watch('itemsRaw', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw['+xx+'].items[0]', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw.loadMore.items[0]', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw.loadMore', function(newVal, oldVal) {
+				//$scope.$watch('itemsRaw.extra.items[0]', function(newVal, oldVal) {
+				//$scope.$watch('itemsRaw.extra', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw.'+xx, function(newVal, oldVal) {
 				$scope.$watch('itemsRaw.'+xx+'.items', function(newVal, oldVal) {
 					if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+						if($scope.totFilteredItems <$scope.page*$attrs.pageSize) {		//if only on first page, reset (otherwise load more button / triggers will be set to false since there's no more in queue / from backend)
+							resetItems({});
+						}
 						formItems({});
 						/*
 						if($scope.queuedItems.length <$attrs.pageSize && $scope.totFilteredItems <$scope.page*$attrs.pageSize) {		//load more externally if don't have enough
@@ -510,6 +536,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 						getMoreItemsTrig =true;
 					}
 					$scope.page++;
+					//checkForScrollBar({});
 					$scope.filterItems({});
 				}
 				else {
@@ -535,7 +562,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			If have items in queue, they're added to itemsRaw and then formItems is re-called to re-form filtered items & update display
 			*/
 			function getMoreItems(params) {
-				if($scope.loadMore !=undefined) {
+				if($scope.loadMore !=undefined && $scope.loadMore() !=undefined && typeof($scope.loadMore()) =='function') {		//this is an optional scope attr so don't assume it exists
 					/*
 					$scope.loadMore();
 					*/
@@ -558,7 +585,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 									ppTemp.loadPageSize =loadPageSize;
 								}
 							}
-							$scope.loadMore()({'cursor':cursors.loadMore, 'loadMorePageSize':loadPageSize, 'searchText':$scope.searchText}, function(results, ppCustom) {
+							$scope.loadMore()({'cursor':cursors[$attrs.loadMoreItemsKey], 'loadMorePageSize':loadPageSize, 'searchText':$scope.searchText}, function(results, ppCustom) {
 								addLoadMoreItems(results, ppCustom, ppTemp);
 							});
 						}
@@ -598,6 +625,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 					$scope.itemsRaw[$attrs.loadMoreItemsKey].items =$scope.itemsRaw[$attrs.loadMoreItemsKey].items.concat($scope.queuedItems.slice(0, numFromQueue));
 					if(params.partialLoad ==undefined || !params.partialLoad || numFromQueue ==$attrs.pageSize) {		//partial load can be set if need to load a new page so may still need to increment page if loading same number of items as page size
 						$scope.page++;
+						//checkForScrollBar({});
 					}
 					formItems({});
 					//remove from queue
@@ -621,7 +649,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			function addLoadMoreItems(results, ppCustom, params) {
 				//$scope.queuedItems.push(results);		//doesn't work - nests array too deep; use concat instead..
 				$scope.queuedItems =$scope.queuedItems.concat(results);
-				cursors.loadMore +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
+				cursors[$attrs.loadMoreItemsKey] +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
 				//if don't have enough results, assume backend is done so are out of items
 				if(results.length <$attrs.loadMorePageSize || (params.loadPageSize !=undefined && results.length <params.loadPageSize)) {
 					$scope.noMoreLoadMoreItems =true;
@@ -632,7 +660,40 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				}
 			}
 			
+			//9.
+			function checkForScrollBar(params) {
+				if($scope.scrollLoad) {
+					$timeout(function() {		//need timeout to wait for items to load / display so scroll height is correct
+						if($attrs.pageScroll) {
+							//var scrollPos =$(window).scrollTop();
+							var scrollHeight =$(document).height();
+							var viewportHeight =$(window).height();
+							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+height1);
+							if(scrollHeight >viewportHeight) {
+								$scope.hasScrollbar =true;
+							}
+							else {
+								$scope.hasScrollbar =false;
+							}
+						}
+						else {
+							var ele =document.getElementById($attrs.ids.scrollContent);
+							//var scrollPos =ele.scrollTop;
+							var scrollHeight =ele.scrollHeight;
+							var height1 =ele.clientHeight;
+							//console.log('checkForScrollBar scrollHeight: '+scrollHeight+' height1: '+height1);
+							if(scrollHeight >height1) {
+								$scope.hasScrollbar =true;
+							}
+							else {
+								$scope.hasScrollbar =false;
+							}
+						}
+					}, 100);
+				}
+			}
+			
 			init({});		//init (called once when directive first loads)
-		},
+		}
 	};
 }]);
