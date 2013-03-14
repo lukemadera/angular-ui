@@ -53,6 +53,12 @@ attrs
 		DEFAULT: 20
 	noStopLoadMore {Number} 1 to not set noMoreLoadMoreItems prev & next to true if don't have enough results returned from load more
 		DEFAULT: 0
+	@param {Number} [negativeLoad=0] 1 to try to load more even if at 0 cursor
+	@param {Number} [animateScroll=0] 1 to animate when moving back to middle after load more from top or bottom
+	@param {Number} [animateScrollDuration=1000] Number of milliseconds for scroll duration
+	@param {Number} [itemHeight=0] Number of pixels for an item (if specified, this will keep the current item in the same spot after loading more - otherwise it will go to the middle after loading)
+	@param {Number} [animateAfterItems=0] Number of items to slow pan through (to indicate to user that something has changed) AFTER jump to middle, etc.
+	@param {Number} [animateAfterDuration=1000] Milliseconds for how long animation is for the after items animate
 
 
 EXAMPLE usage:
@@ -99,7 +105,7 @@ controller / js:
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$compile', '$timeout', function (uiConfig, $compile, $timeout) {
+angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$compile', '$timeout', 'uiInfinitescrollData', function (uiConfig, $compile, $timeout, uiInfinitescrollData) {
   return {
 		restrict: 'A',
 		transclude: true,
@@ -113,19 +119,25 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':75, 'scrollBufferPercent':33, 'noStopLoadMore':0};
+			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':75, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000};
 			for(var xx in defaults) {
 				if(attrs[xx] ==undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}
 			//convert to int
+			var attrsToInt =['pageSize', 'loadMorePageSize', 'scrollLoad', 'scrollBuffer', 'pageScroll', 'noStopLoadMore', 'negativeLoad', 'animateLoad', 'animateScrollDuration', 'itemHeight', 'animateAfterItems', 'animateAfterDuration'];
+			for(var ii=0; ii<attrsToInt.length; ii++) {
+				attrs[attrsToInt[ii]] =parseInt(attrs[attrsToInt[ii]], 10);
+			}
+			/*
 			attrs.pageSize =parseInt(attrs.pageSize, 10);
 			attrs.loadMorePageSize =parseInt(attrs.loadMorePageSize, 10);
 			attrs.scrollLoad =parseInt(attrs.scrollLoad, 10);
 			attrs.scrollBuffer =parseInt(attrs.scrollBuffer, 10);
 			attrs.pageScroll =parseInt(attrs.pageScroll, 10);
 			attrs.noStopLoadMore =parseInt(attrs.noStopLoadMore, 10);
+			*/
 			//ensure loadMorePageSize is at least as large as pageSize
 			if(attrs.loadMorePageSize <attrs.pageSize) {
 				attrs.loadMorePageSize =attrs.pageSize;
@@ -146,7 +158,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
-					"<div ng-hide='(noMoreLoadMoreItems.prev) || opts.cursors.itemsView.start <=0 || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
+					"<div ng-hide='(noMoreLoadMoreItems.prev) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
 					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-lookup-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
@@ -154,7 +166,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 					"<div ng-hide='(noMoreLoadMoreItems.next) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
-					"<div ng-show='noMoreLoadMoreItems.next' class='ui-infinitescroll-no-more'>No More Results!</div>"+
+					"<div ng-show='noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 			"</div>";
 				
@@ -171,7 +183,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 					},
 					'itemsView':{
 						'current':0
-					}
+					},
 				},
 				'scrollId':false
 			};
@@ -189,6 +201,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				scrollId =$scope.opts.scrollId;
 			}
 			
+			$scope.negativeLoad =$attrs.negativeLoad;		//copy into scope
+			//to allow / handle loading items below "0". The logic inside this directive (and arrays) can't/won't go below 0 so we'll just keep it at 0 and use this to keep track of what the "negative offset" is
+			$scope.opts.cursors.negative =0;
+			//$scope.cursorNegative =0;
 			$scope.trigs ={'loading':false};
 			//$scope.items =[];
 			
@@ -225,60 +241,94 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 			//10.
 			//add scroll handle to load more
 			if($attrs.scrollLoad) {
-				if($attrs.pageScroll) {
-					window.onscroll =function() {
-						$timeout.cancel(timeoutInfo.scrolling.trig);
-						timeoutInfo.scrolling.trig =$timeout(function() {
-							//console.log('uiLookup timeout scrolling loading');
-							var buffer =$attrs.scrollBuffer;
-							var scrollPos =$(window).scrollTop();
-							var scrollHeight =$(document).height();
-							var viewportHeight =$(window).height();
-							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+viewportHeight);
-							var percentTop =scrollPos /scrollHeight *100;
-							var percentBottom =(scrollPos +viewportHeight) /scrollHeight *100;
-							$scope.scrollInfo ={
-								'scrollPos':scrollPos,
-								'scrollHeight':scrollHeight,
-								'viewportHeight':viewportHeight,
-								'diff':(scrollHeight-viewportHeight-buffer),
-								'percentTop':percentTop,
-								'percentBottom':percentBottom
-							};
-							//if(scrollPos >=(scrollHeight-viewportHeight-buffer) || (percentBottom > (100-$attrs.scrollBufferPercent)) ) {
-							if(scrollPos >5 && scrollPos >=(scrollHeight-viewportHeight-buffer)) {		//don't load more if 0 scrollPos (this specificlly fixes an initial double load issue)
-								$scope.loadMoreDir({'noDelay':true, 'next':true});
+				//don't add right away (otherwise the initial load can duplicate load and jump around - need to let it initialize first)
+				$timeout(function() {
+					if($attrs.pageScroll) {
+						if(1) {
+							uiInfinitescrollData.addScrollEvt($attrs.id, {'attrs':$attrs, 'timeoutInfo':timeoutInfo, 'callback':function() {
+								//console.log('window onscroll: id: '+$attrs.ids.scrollContent+' element: '+document.getElementById($attrs.ids.scrollContent));
+								$timeout.cancel(timeoutInfo.scrolling.trig);
+								timeoutInfo.scrolling.trig =$timeout(function() {
+									//console.log('uiLookup timeout scrolling loading');
+									var buffer =$attrs.scrollBuffer;
+									var scrollPos =$(window).scrollTop();
+									var scrollHeight =$(document).height();
+									var viewportHeight =$(window).height();
+									//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+viewportHeight);
+									var percentTop =scrollPos /scrollHeight *100;
+									var percentBottom =(scrollPos +viewportHeight) /scrollHeight *100;
+									$scope.scrollInfo ={
+										'scrollPos':scrollPos,
+										'scrollHeight':scrollHeight,
+										'viewportHeight':viewportHeight,
+										'diff':(scrollHeight-viewportHeight-buffer),
+										'percentTop':percentTop,
+										'percentBottom':percentBottom
+									};
+									//if(scrollPos >=(scrollHeight-viewportHeight-buffer) || (percentBottom > (100-$attrs.scrollBufferPercent)) ) {
+									if(scrollPos >5 && scrollPos >=(scrollHeight-viewportHeight-buffer)) {		//don't load more if 0 scrollPos (this specificlly fixes an initial double load issue)
+										$scope.loadMoreDir({'noDelay':true, 'next':true});
+									}
+									//prev version
+									//if(scrollPos <=buffer || (percentTop <$attrs.scrollBufferPercent) ) {
+									if(scrollPos <=buffer ) {
+										$scope.loadMoreDir({'noDelay':true, 'prev':true});
+									}
+								}, timeoutInfo.scrolling.delay);
 							}
-							//prev version
-							//if(scrollPos <=buffer || (percentTop <$attrs.scrollBufferPercent) ) {
-							if(scrollPos <=buffer ) {
-								$scope.loadMoreDir({'noDelay':true, 'prev':true});
-							}
-						}, timeoutInfo.scrolling.delay);
-					};
-				}
-				else {
-					document.getElementById(scrollId).onscroll =function() {
-						$timeout.cancel(timeoutInfo.scrolling.trig);
-						timeoutInfo.scrolling.trig =$timeout(function() {
-							//console.log('uiLookup timeout scrolling loading');
-							var buffer =$attrs.scrollBuffer;
-							var ele =document.getElementById(scrollId);
-							var scrollPos =ele.scrollTop;
-							var scrollHeight =ele.scrollHeight;
-							//var viewportHeight =$(ele).height();
-							var viewportHeight =ele.clientHeight;
-							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+viewportHeight);
-							if(scrollPos >=(scrollHeight-viewportHeight-buffer)) {
-								$scope.loadMoreDir({'noDelay':true, 'next':true});
-							}
-							//prev version
-							if(scrollPos <=buffer) {
-								$scope.loadMoreDir({'noDelay':true, 'prev':true});
-							}
-						}, timeoutInfo.scrolling.delay);
-					};
-				}
+							});
+						}
+						else {
+						window.onscroll =function() {
+							timeoutInfo.scrolling.trig =$timeout(function() {
+								var buffer =$attrs.scrollBuffer;
+								var scrollPos =$(window).scrollTop();
+								var scrollHeight =$(document).height();
+								var viewportHeight =$(window).height();
+								var percentTop =scrollPos /scrollHeight *100;
+								var percentBottom =(scrollPos +viewportHeight) /scrollHeight *100;
+								$scope.scrollInfo ={
+									'scrollPos':scrollPos,
+									'scrollHeight':scrollHeight,
+									'viewportHeight':viewportHeight,
+									'diff':(scrollHeight-viewportHeight-buffer),
+									'percentTop':percentTop,
+									'percentBottom':percentBottom
+								};
+								//if(scrollPos >=(scrollHeight-viewportHeight-buffer) || (percentBottom > (100-$attrs.scrollBufferPercent)) ) {
+								if(scrollPos >5 && scrollPos >=(scrollHeight-viewportHeight-buffer)) {		//don't load more if 0 scrollPos (this specificlly fixes an initial double load issue)
+									$scope.loadMoreDir({'noDelay':true, 'next':true});
+								}
+								//prev version
+								//if(scrollPos <=buffer || (percentTop <$attrs.scrollBufferPercent) ) {
+								if(scrollPos <=buffer ) {
+									$scope.loadMoreDir({'noDelay':true, 'prev':true});
+								}
+							}, timeoutInfo.scrolling.delay);
+						};
+						}
+					}
+					else {
+						document.getElementById(scrollId).onscroll =function() {
+							$timeout.cancel(timeoutInfo.scrolling.trig);
+							timeoutInfo.scrolling.trig =$timeout(function() {
+								var buffer =$attrs.scrollBuffer;
+								var ele =document.getElementById(scrollId);
+								var scrollPos =ele.scrollTop;
+								var scrollHeight =ele.scrollHeight;
+								//var viewportHeight =$(ele).height();
+								var viewportHeight =ele.clientHeight;
+								if(scrollPos >=(scrollHeight-viewportHeight-buffer)) {
+									$scope.loadMoreDir({'noDelay':true, 'next':true});
+								}
+								//prev version
+								if(scrollPos <=buffer) {
+									$scope.loadMoreDir({'noDelay':true, 'prev':true});
+								}
+							}, timeoutInfo.scrolling.delay);
+						};
+					}
+				}, 1000);
 			}
 			
 			//0.5.
@@ -316,11 +366,36 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 			@param params
 			*/
 			function setItems(params) {
-				
+				var ppSend ={};
+				if($attrs.itemHeight) {		//save current cursor positions so can calculate change later
+					var height1 =$attrs.itemHeight;
+					var cursorsSave ={
+						'start':$scope.opts.cursors.itemsView.start,
+						'end':$scope.opts.cursors.itemsView.end,
+					};
+				}
 				$scope.opts.cursors.itemsView.end =$scope.page*$attrs.pageSize +$attrs.pageSize;
 				setItemsViewCursor({});
 				$scope.itemsView =$scope.items.slice($scope.opts.cursors.itemsView.start, $scope.opts.cursors.itemsView.end);
-				scrollToMiddle({});
+				
+				if($attrs.itemHeight) {
+					if(params.prev) {
+						ppSend.prev =true;
+						var diff =cursorsSave.start -$scope.opts.cursors.itemsView.start;
+					}
+					else {
+						ppSend.prev =false;
+						var diff =$scope.opts.cursors.itemsView.end -cursorsSave.end;
+					}
+					var diffHeight =diff*height1;
+					if(diffHeight <0) {
+						diffHeight =diffHeight *-1;
+					}
+					//alert('diffHeight: '+diffHeight);
+					ppSend.diffHeight =diffHeight;
+				}
+				
+				scrollToMiddle(ppSend);
 				checkForScrollBar({});
 			}
 			
@@ -338,24 +413,66 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				$scope.opts.cursors.itemsView.start =start;
 			}
 			
+			/**
 			//2.
+			@param {Object} params
+				@param {Boolean} [prev] True if loading a previous page (i.e. scrolling up)
+				@param {Number} [diffHeight] Pixels of where to scroll to (instead of just going to middle)
+			*/
 			function scrollToMiddle(params) {
 				if($attrs.pageScroll) {
-					if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - @todo - could probably find a better fix - i.e. also check what the last cursor was at?)
-						window.scrollTo(0, 0);
+					if(0) {		//@todo - need a better solution than this.. see below
+					//if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - could probably find a better fix - i.e. also check what the last cursor was at?)
+						if($attrs.animateScroll) {
+							$(window).animate({scrollTop: 0+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+						}
+						else {
+							window.scrollTo(0, 0);
+						}
 					}
 					else {
 						var scrollPos =$(window).scrollTop();
 						var scrollHeight =$(document).height();
 						var viewportHeight =$(window).height();
 						var middle =Math.floor((scrollHeight/2) -viewportHeight/2);
-						window.scrollTo(0, middle);
+						
+						if(params.diffHeight) {
+							if(params.prev) {
+								middle =params.diffHeight;
+							}
+							else {
+								middle =scrollHeight -params.diffHeight -viewportHeight;
+							}
+						}
+						
+						if($attrs.animateScroll) {
+							$(window).animate({scrollTop: middle+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+						}
+						else {
+							window.scrollTo(0, middle);
+						}
+						
+						if($attrs.animateAfterItems) {
+							if(params.prev) {
+								var newMiddle =middle -$attrs.itemHeight*$attrs.animateAfterItems;
+							}
+							else {
+								var newMiddle =middle +$attrs.itemHeight*$attrs.animateAfterItems;
+							}
+							$(window).animate({scrollTop: newMiddle+'px'}, $attrs.animateAfterDuration);		//animate the scrolling
+						}
 					}
 					//console.log('scrollPos: '+$(window).scrollTop());
 				}
 				else {
-					if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - @todo - could probably find a better fix - i.e. also check what the last cursor was at?)
-						document.getElementById(scrollId).scrollTop =0;
+					if(0) {		//@todo - need a better solution than this.. see below
+					//if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - could probably find a better fix - i.e. also check what the last cursor was at?)
+						if($attrs.animateScroll) {
+							$("#"+scrollId).animate({scrollTop: 0+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+						}
+						else {
+							document.getElementById(scrollId).scrollTop =0;
+						}
 					}
 					else {
 						var ele =document.getElementById(scrollId);
@@ -364,7 +481,34 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 						//var viewportHeight =$(ele).height();
 						var viewportHeight =ele.clientHeight;
 						var middle =Math.floor((scrollHeight/2) -viewportHeight/2);
-						document.getElementById(scrollId).scrollTop =middle;
+						
+						if(params.diffHeight) {
+							if(params.prev) {
+								middle =params.diffHeight;
+							}
+							else {
+								//middle =scrollHeight -params.diffHeight +viewportHeight -$attrs.itemHeight;
+								//middle =scrollHeight -params.diffHeight -$attrs.itemHeight;
+								middle =scrollHeight -params.diffHeight -viewportHeight;
+							}
+						}
+						
+						if($attrs.animateScroll) {
+							$("#"+scrollId).animate({scrollTop: middle+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+						}
+						else {
+							document.getElementById(scrollId).scrollTop =middle;
+						}
+						
+						if($attrs.animateAfterItems) {
+							if(params.prev) {
+								var newMiddle =middle -$attrs.itemHeight*$attrs.animateAfterItems;
+							}
+							else {
+								var newMiddle =middle +$attrs.itemHeight*$attrs.animateAfterItems;
+							}
+							$("#"+scrollId).animate({scrollTop: newMiddle+'px'}, $attrs.animateAfterDuration);		//animate the scrolling
+						}
 					}
 					//console.log('scrollPos: '+ele.scrollTop);
 				}
@@ -460,7 +604,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				else {
 					$scope.page++;
 				}
-				setItems({});
+				setItems(params);
 			}
 			
 			//7.
@@ -476,9 +620,9 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 					var ppTemp ={};
 					if(params.prev) {
 						ppTemp.prev =true;
-						if($scope.opts.cursors.items.start >0 && !$scope.noMoreLoadMoreItems.prev) {		//only try to load more if have more left to load
+						if(($scope.opts.cursors.items.start >0 || $scope.negativeLoad) && !$scope.noMoreLoadMoreItems.prev) {		//only try to load more if have more left to load
 							var loadPageSize =$attrs.loadMorePageSize;
-							var cursor =$scope.opts.cursors.items.start -loadPageSize;
+							var cursor =$scope.opts.cursors.items.start +$scope.opts.cursors.negative -loadPageSize;
 							$scope.loadMore()({'cursor':cursor, 'loadMorePageSize':loadPageSize, 'searchText':''}, function(results, ppCustom) {
 								addLoadMoreItems(results, ppCustom, ppTemp);
 							});
@@ -512,7 +656,15 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				if(results.length >0) {
 					if(params.prev) {
 						$scope.items =results.concat($scope.items);
+						//shift page number up accordingly since added items to beginning
+						$scope.page +=Math.ceil(results.length /$attrs.pageSize);
 						$scope.opts.cursors.items.start -=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
+						//if negative, reset to 0 and increment opts.cursors.negative
+						if($scope.opts.cursors.items.start <0) {
+							$scope.opts.cursors.negative -=$scope.opts.cursors.items.start*-1;
+							$scope.opts.cursors.items.end += ($scope.opts.cursors.items.start *-1);		//have to push up items.end the same amount we're removing from items.start
+							$scope.opts.cursors.items.start =0;
+						}
 					}
 					else {
 						$scope.items =$scope.items.concat(results);
@@ -528,8 +680,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				}
 				
 				//if don't have enough results, assume backend is done so are out of items
-				//if(!$attrs.noStopLoadMore) {
-				if(0) {		//@todo - fix this since "no more results" is displaying early - trigger is set correctly below but html display needs another condition or something when there's still items left in javascript but no more on backend to not show "no more results" yet
+				if(!$attrs.noStopLoadMore) {
+				//if(0) {
 					if(results.length <$attrs.loadMorePageSize || (params.loadPageSize !=undefined && results.length <params.loadPageSize)) {
 						if(params.prev) {
 							$scope.noMoreLoadMoreItems.prev =true;
@@ -577,4 +729,53 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 			init({});		//init (called once when directive first loads)
 		}
 	};
-}]);
+}])
+.factory('uiInfinitescrollData', ['ui.config', '$timeout', function (uiConfig, $timeout) {
+var inst ={
+	data: {},		//each key is a unique form id and each of those holds current data/info
+	inited: false,
+	
+	/**
+	*/
+	windowScroll: function(instId, data, params) {
+		data.callback({});
+	},
+	
+	/**
+	*/
+	removeScrollEvt: function(instId, params) {
+		if(this.data[instId] !=undefined) {
+			delete this.data[instId];
+		}
+	},
+	
+	/**
+	@param {String} instId Unique key for this scrolling event (so don't have multiple events firing on the same element/page and so can cancel/remove the event listeners when destroyed)
+	@param {Object} params
+		@param {Object} attrs Pass through of attrs of directive (more than what's detailed below - see directive above for what attributes it has)
+			@param {Number} pageScroll 1 if want to use window / full page scroll (otherwise will scroll based on an element id)
+	*/
+	addScrollEvt: function(instId, params) {
+		var thisObj =this;
+		if(!this.inited) {
+			window.onscroll =function() {
+				for(var xx in thisObj.data) {
+					//see if infinite scroll element is still defined / on page (remove event listener otherwise)
+					if(document.getElementById(thisObj.data[xx].attrs.ids.scrollContent)) {
+						thisObj.windowScroll(xx, thisObj.data[xx], {});
+					}
+					else {		//remove
+						thisObj.removeScrollEvt(xx, {});
+					}
+				}
+			};
+		}
+		this.inited =true;
+
+		thisObj.data[params.attrs.id] =params;
+	},
+	
+};
+return inst;
+}])
+;
