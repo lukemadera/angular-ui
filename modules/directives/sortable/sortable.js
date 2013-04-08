@@ -67,7 +67,7 @@ angular.module('ui.directives').directive('uiSortable', [
               onStart(e, ui);
               if (typeof _start === "function")
                 _start(e, ui);
-            }
+            };
           })(opts.start);
 
           // If user provided 'start' callback compose it with onStart function
@@ -76,7 +76,7 @@ angular.module('ui.directives').directive('uiSortable', [
               onStop(e, ui);
               if (typeof _stop === "function")
                 _stop(e, ui);
-            }
+            };
           })(opts.stop);
 
           // If user provided 'update' callback compose it with onUpdate function
@@ -85,7 +85,7 @@ angular.module('ui.directives').directive('uiSortable', [
               onUpdate(e, ui);
               if (typeof _update === "function")
                 _update(e, ui);
-            }
+            };
           })(opts.update);
 
           // If user provided 'receive' callback compose it with onReceive function
@@ -94,7 +94,7 @@ angular.module('ui.directives').directive('uiSortable', [
               onReceive(e, ui);
               if (typeof _receive === "function")
                 _receive(e, ui);
-            }
+            };
           })(opts.receive);
 
           // If user provided 'remove' callback compose it with onRemove function

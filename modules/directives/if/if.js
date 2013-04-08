@@ -15,7 +15,7 @@ angular.module('ui.directives').directive('uiIf', [function () {
         var childElement;
         var childScope;
  
-        scope.$watch(attr['uiIf'], function (newValue) {
+        scope.$watch(attr.uiIf, function (newValue) {
           if (childElement) {
             childElement.remove();
             childElement = undefined;

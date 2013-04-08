@@ -18,7 +18,8 @@ describe('uiSortable', function() {
         var element;
         element = $compile('<ul ui-sortable ng-model="items"><li ng-repeat="item in items" id="s-{{$index}}">{{ item }}</li></ul>')($rootScope);
         $rootScope.$apply(function() {
-          return $rootScope.items = ["One", "Two", "Three"];
+					$rootScope.items = ["One", "Two", "Three"];
+					return $rootScope.items;
         });
 
         element.find('li:eq(1)').insertAfter(element.find('li:eq(2)'));

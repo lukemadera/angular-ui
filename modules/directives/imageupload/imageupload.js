@@ -76,17 +76,18 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 		restrict: 'A',
 		//transclude: true,
 		scope: {
-			opts:'=',
+			opts:'='
 		},
 
 		compile: function(element, attrs) {
+			var xx;
 			var defaults ={'type':'dragNDrop', 'classes':{'dragText':'ui-imageupload-drag-text', 'orText':'ui-imageupload-or-text', 'uploadText':'ui-imageupload-upload-text', 'browseInput':'ui-imageupload-browse-input', 'browseButton':'ui-imageupload-browse-button', 'uploadButton':'ui-imageupload-upload-button'}, 'htmlUploading':'', 'showProgress':true};
-			if(attrs.htmlUploading !=undefined) {
+			if(attrs.htmlUploading !==undefined) {
 				defaults.showProgress =false;
 			}
 
-			for(var xx in defaults) {
-				if(attrs[xx] ==undefined) {
+			for(xx in defaults) {
+				if(attrs[xx] ===undefined) {
 					if(typeof(defaults[xx]) =='object') {		//don't extend objects - will do that after this
 						attrs[xx] ={};
 					}
@@ -95,8 +96,8 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					}
 				}
 			}
-			for(var xx in defaults.classes) {
-				if(attrs.classes[xx] ==undefined) {
+			for(xx in defaults.classes) {
+				if(attrs.classes[xx] ===undefined) {
 					attrs.classes[xx] =defaults.classes[xx];
 				}
 			}
@@ -109,7 +110,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			}
 			*/
 			
-			if(attrs.id ==undefined) {
+			if(attrs.id ===undefined) {
 				attrs.id ="uiImageupload"+Math.random().toString(36).substring(7);
 			}
 			var fileTypeDisplay ="Image";
@@ -118,46 +119,47 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				'input':{
 					'fileFake':id1+"FileFake",
 					'file':id1+"File",
-					'byUrl':id1+"ByUrl",
-				},
+					'byUrl':id1+"ByUrl"
+				}
 			};
 			attrs.ids =ids;		//save for later
 			//save in case need later / in service
 			uiImageuploadData[id1] ={
-				'ids':ids,
+				'ids':ids
 			};
 			
-			if(attrs.htmlDisplay !=undefined)
+			var htmlDisplay, htmlUrlInstructions;
+			if(attrs.htmlDisplay !==undefined)
 			{
-				var htmlDisplay =attrs.htmlDisplay;
+				htmlDisplay =attrs.htmlDisplay;
 				htmlDisplay +="<input ng-model='fileFake' id='"+ids.input.fileFake+"' type='hidden' disabled=disabled name='fakeupload' />";		//add in fake input to avoid errors when trying to fill it later
 			}
 			else
 			{
-				var htmlDisplay ="<span class='"+attrs.classes.dragText+"'>Drag "+fileTypeDisplay+" Here</span><br />";
+				htmlDisplay ="<span class='"+attrs.classes.dragText+"'>Drag "+fileTypeDisplay+" Here</span><br />";
 				htmlDisplay+="<span class='"+attrs.classes.orText+"'>--OR--</span><br />";
 				htmlDisplay+="<span class='"+attrs.classes.uploadText+"'>Upload File:</span><br />";
 				htmlDisplay+="<input ng-model='fileFake' id='"+ids.input.fileFake+"' type='text' disabled=disabled name='fakeupload' class='"+attrs.classes.browseInput+"' /><span class='"+attrs.classes.browseButton+"'>Browse</span>";
 			}
-			if(attrs.htmlUrlInstructions !=undefined)
+			if(attrs.htmlUrlInstructions !==undefined)
 			{
-				var htmlUrlInstructions =attrs.htmlUrlInstructions;
+				htmlUrlInstructions =attrs.htmlUrlInstructions;
 			}
 			else
 			{
-				var htmlUrlInstructions ="<span class='ui-imageupload-by-url-instructions'>1. Right click an image on the web, 2. Choose \"Copy image URL\", 3. Paste it above!</span>";
+				htmlUrlInstructions ="<span class='ui-imageupload-by-url-instructions'>1. Right click an image on the web, 2. Choose \"Copy image URL\", 3. Paste it above!</span>";
 			}
 			
 			//@todo - don't have access to cropOptions yet - in $scope..
 			attrs.cropOptions ={
 				'cropAspectRatio':1
-			}
+			};
 			var widthAspectDummyPercent =Math.floor(100 / attrs.cropOptions.cropAspectRatio);
 			widthAspectDummyPercent =0;		//@todo - this doesn't seem to be working otherwise..
 			
 			var ngShow ={
 				'dragNDrop':false,
-				'uploadButton':false,
+				'uploadButton':false
 			};
 			if(attrs.type =='dragNDrop') {
 				ngShow.dragNDrop =true;
@@ -197,7 +199,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			
 			//if(attrs.type !='dragNDrop') {
 			if(1) {
-				html+="<div class='ui-imageupload-by-url-container' ng-hide='"+ngShow.dragNDrop+"'>"
+				html+="<div class='ui-imageupload-by-url-container' ng-hide='"+ngShow.dragNDrop+"'>";
 				html+="<span class='ui-imageupload-by-url-text'>Upload From Other Website</span><br /><br />";
 				html+="<input ng-model='fileByUrl' id='"+attrs.ids.input.byUrl+"' type='text' class='ui-imageupload-by-url-input' placeholder='Copy & Paste URL here' />";
 				html+=htmlUrlInstructions;
@@ -219,17 +221,17 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 		
 		controller: function($scope, $element, $attrs) {
 			var defaults ={'cropOptions':uiImageuploadData.cropOptionsDefault, 'serverParamNames':{'file':'file', 'byUrl':'pp[fileUrl]'}, 'values':{}};
-			if($scope.opts ==undefined) {
+			if($scope.opts ===undefined) {
 				$scope.opts ={};
 			}
 			for(var xx in defaults) {
-				if($scope.opts[xx] ==undefined) {
+				if($scope.opts[xx] ===undefined) {
 					$scope.opts[xx] =defaults[xx];
 				}
 			}
 			/*
 			attrs.serverParamNames =$.extend({}, defaults.serverParamNames, params.serverParamNames);
-			if(params.cropOptions !=undefined) {
+			if(params.cropOptions !==undefined) {
 				params.cropOptions =$.extend({}, defaults.cropOptions, params.cropOptions);
 			}
 			*/
@@ -238,7 +240,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			$scope.show ={
 				'notify':false,
 				'pictureContainer':false,
-				'pictureContainerBelow':false,
+				'pictureContainerBelow':false
 			};
 			
 			/**
@@ -265,16 +267,16 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					}
 					if(params.fileTypes !='any')
 					{
-						returnArray['valid'] =false;
-						returnArray['errorMsg'] ="Allowed file types are: ";
+						returnArray.valid =false;
+						returnArray.errorMsg ="Allowed file types are: ";
 						for(var ii=0; ii<params.fileTypes.length; ii++)
 						{
-							returnArray['errorMsg']+=params.fileTypes[ii].toLowerCase()
+							returnArray.errorMsg +=params.fileTypes[ii].toLowerCase();
 							if(ii<(params.fileTypes.length-1))
-								returnArray['errorMsg']+=", ";
+								returnArray.errorMsg +=", ";
 							if(params.fileTypes[ii].toLowerCase() ==fileExtension)
 							{
-								returnArray['valid'] =true;
+								returnArray.valid =true;
 								//break;		//don't break since want to complete error message
 							}
 						}
@@ -296,19 +298,20 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			//3.
 			*/
 			$scope.fileSelected =function(params) {
+				var file, retArray;
 				if($attrs.type =='byUrl')
 				{
-					var file =document.getElementById($attrs.ids.input.byUrl).value;
-					var retArray =checkFileType(file, {'fileTypes':$scope.opts.fileTypes});
-					if(!retArray['valid'])		//invalid file type extension
+					file =document.getElementById($attrs.ids.input.byUrl).value;
+					retArray =checkFileType(file, {'fileTypes':$scope.opts.fileTypes});
+					if(!retArray.valid)		//invalid file type extension
 					{
 						document.getElementById($attrs.ids.input.byUrl).value ='';
-						alert(retArray['errorMsg']);
+						alert(retArray.errorMsg);
 					}
 				}
 				else		//drag n drop (regular file input)
 				{
-					var file = document.getElementById($attrs.ids.input.file).files[0];
+					file = document.getElementById($attrs.ids.input.file).files[0];
 					if (file)
 					{
 						var fileSize = 0;
@@ -326,11 +329,11 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					}
 					if(file)
 					{
-						var retArray =checkFileType(file.name, {'fileTypes':$scope.opts.fileTypes});
-						if(!retArray['valid'])		//invalid file type extension
+						retArray =checkFileType(file.name, {'fileTypes':$scope.opts.fileTypes});
+						if(!retArray.valid)		//invalid file type extension
 						{
 							document.getElementById($attrs.ids.input.file).value ='';
-							alert(retArray['errorMsg']);
+							alert(retArray.errorMsg);
 						}
 						else		//update fake file input (match with actual file input)
 						{
@@ -349,19 +352,20 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			//4.
 			*/
 			$scope.uploadFile =function(params) {
+				var fileVal;
 				if($attrs.htmlUploading) {
 					$scope.show.notify =true;
 				}
-				if($attrs.fileUrl !=undefined) {
-					var fileVal =$attrs.fileUrl;
+				if($attrs.fileUrl !==undefined) {
+					fileVal =$attrs.fileUrl;
 				}
 				else if($attrs.type =='byUrl')
 				{
 					//LLoading.show({});
-					var fileVal =document.getElementById($attrs.ids.input.byUrl).value;
+					fileVal =document.getElementById($attrs.ids.input.byUrl).value;
 				}
 				else {
-					var fileVal =document.getElementById($attrs.ids.input.file).value;
+					fileVal =document.getElementById($attrs.ids.input.file).value;
 				}
 				//alert(fileVal);
 				if(fileVal.length >0)
@@ -384,11 +388,11 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					fd.append(params.inputIds.uploadDirectory, params.uploadDirectory);
 					*/
 					if($attrs.type =='byUrl')
-						fd.append($scope.opts.serverParamNames['byUrl'], fileVal);
+						fd.append($scope.opts.serverParamNames.byUrl, fileVal);
 					else
-						fd.append($scope.opts.serverParamNames['file'], document.getElementById($attrs.ids.input.file).files[0]);
+						fd.append($scope.opts.serverParamNames.file, document.getElementById($attrs.ids.input.file).files[0]);
 					fd.append('pp[uploadDir]', $scope.opts.uploadDirectory);
-					if($scope.opts.cropOptions !=undefined) {
+					if($scope.opts.cropOptions !==undefined) {
 						for(var xx in $scope.opts.cropOptions) {
 							fd.append('pp['+xx+']', $scope.opts.cropOptions[xx]);
 						}
@@ -468,12 +472,12 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			//6.5.
 			*/
 			function afterComplete(params, data) {
-				//if(params.imageServerKeys !=undefined) {
+				//if(params.imageServerKeys !==undefined) {
 				if(1) {
 					//show uploaded image
 					//thisObj.saveInstanceData(params.instanceId, data, params);
 					var imgInfo ={};
-					if(data[$scope.opts.imageServerKeys.imgFilePath] !=undefined) {
+					if(data[$scope.opts.imageServerKeys.imgFilePath] !==undefined) {
 						imgInfo.imgSrc =data[$scope.opts];
 						//thisObj.curData[params.instanceId][params.imageServerKeys.imgFilePath] =imgInfo.imgSrc;
 					}
@@ -510,7 +514,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 							thisObj.fixImageSizing({'divId':params.instanceId, 'id':params.ids.pictureContainerImgOuter, 'imgInfo':{'height':imgInfo.picHeightCrop, 'width':imgInfo.picWidthCrop} }, thisObj.afterCompleteResizing, [params, data]);
 						}, 1000);
 						*/
-					}
+					};
 					//img.src =imgInfo.imgSrcCrop+'?'+LString.random(8,{});		//ensure new image shows up
 					img.src =imgInfo.imgSrcCrop;
 					/*
@@ -532,7 +536,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					*/
 				}
 				
-				if($scope.opts.callbackInfo && ($scope.opts.callbackInfo ==undefined || !params.noCallback))
+				if($scope.opts.callbackInfo && ($scope.opts.callbackInfo ===undefined || !params.noCallback))
 				{
 					var args =$scope.opts.callbackInfo.args;
 					args =args.concat(data);
@@ -568,7 +572,7 @@ var inst ={
 	cropCoords: {'x1':0, 'x2':0, 'y1':0, 'y2':0},		//will hold 1D associative array of x1, x2, y1, y2
 	cropCurrentImageSrc: "",
 	cropInfoEdit: {'JcropApi':false, 'cropping':false},
-	curData: {},		//will hold info such as the current file path; one per instance id
+	curData: {}		//will hold info such as the current file path; one per instance id
 };
 return inst;
 }])

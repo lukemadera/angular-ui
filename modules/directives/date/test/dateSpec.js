@@ -123,7 +123,7 @@ describe('uiDate', function() {
         var watched = false;
         $rootScope.myDateSelected = function() {
           $rootScope.watchMe = true;
-        }
+        };
         $rootScope.$watch("watchMe", function(watchMe) {
           if (watchMe) {
             watched = true;

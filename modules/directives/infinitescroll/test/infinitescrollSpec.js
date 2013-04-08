@@ -42,13 +42,13 @@ describe('uiLookup', function () {
 					{'_id':'d3', 'name':'joe james'},
 					{'_id':'d4', 'name':'ron artest'},
 					{'_id':'d5', 'name':'kobe bryant'},
-					{'_id':'d6', 'name':'steve balls'},
-				],
+					{'_id':'d6', 'name':'steve balls'}
+				]
 			},
 			'extra':{
 				'items':[
-				],
-			},
+				]
+			}
 		};
 		
 		//handle load more (callbacks)
@@ -61,7 +61,7 @@ describe('uiLookup', function () {
 			{'_id':'l5', 'name':'kevin garnett'},
 			{'_id':'l6', 'name':'ray allen'},
 			{'_id':'l7', 'name':'dwight howard'},
-			{'_id':'l8', 'name':'pau gasol'},
+			{'_id':'l8', 'name':'pau gasol'}
 		];
 		
 		//@param params
@@ -93,33 +93,34 @@ describe('uiLookup', function () {
 	});
 	
 	it('should create the correct number of users pending what the search text is', function() {
+		var users;
 		createElm({});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(10);
 		
 		createElm({'searchText':'bryan'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(1);
 		
 		createElm({'searchText':'w'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(2);
 		
 		createElm({'searchText':'a'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(8);
 		
 		createElm({'searchText':'tt'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(2);
 		
 		createElm({'searchText':'b'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		//expect(scope.users.length).toBe(5);		//seems to work also
 		expect(users.length).toBe(5);
 		
 		createElm({'searchText':'bs'});
-		var users =elm.find('div.friends-user');
+		users =elm.find('div.friends-user');
 		expect(users.length).toBe(0);
 		
 		/*

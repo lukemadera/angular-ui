@@ -32,7 +32,7 @@ angular.module('ui.directives').directive('uiStyledselect', ['ui.config', '$comp
 		compile: function(element, attrs) {
 			var defaults ={'placeholder':'Select'};
 			for(var xx in defaults) {
-				if(attrs[xx] ==undefined) {
+				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}

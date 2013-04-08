@@ -62,7 +62,7 @@ angular.module('ui.directives').directive('uiRoute', ['$location', '$parse', fun
         $scope.$on('$routeChangeSuccess', function(){
           watcher();
         });
-      }
+      };
     }
   };
 }]);

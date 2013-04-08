@@ -155,36 +155,36 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 	*/
 	function evalArray(arrayBase, params) {
 		var retArray ={'val':'', 'valid':1, 'msg':''};
-		if(params.noDotNotation ==undefined || !params.noDotNotation) {
+		if(params.noDotNotation ===undefined || !params.noDotNotation) {
 			params.keys =params.keys.split(".");
 		}
 		if(params.keys.length ==1) {
-			if(arrayBase[params.keys[0]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]];
 			}
 		}
 		else if(params.keys.length ==2) {
-			if(arrayBase[params.keys[0]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]][params.keys[1]];
 			}
 		}
 		else if(params.keys.length ==3) {
-			if(arrayBase[params.keys[0]] !=undefined && arrayBase[params.keys[0]][params.keys[1]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined && arrayBase[params.keys[0]][params.keys[1]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]][params.keys[1]][params.keys[2]];
 			}
 		}
 		else if(params.keys.length ==4) {
-			if(arrayBase[params.keys[0]] !=undefined && arrayBase[params.keys[0]][params.keys[1]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined && arrayBase[params.keys[0]][params.keys[1]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]];
 			}
 		}
 		else if(params.keys.length ==5) {
-			if(arrayBase[params.keys[0]] !=undefined && arrayBase[params.keys[0]][params.keys[1]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined && arrayBase[params.keys[0]][params.keys[1]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]][params.keys[4]];
 			}
 		}
 		else if(params.keys.length ==6) {
-			if(arrayBase[params.keys[0]] !=undefined && arrayBase[params.keys[0]][params.keys[1]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]] !=undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]][params.keys[4]] !=undefined) {
+			if(arrayBase[params.keys[0]] !==undefined && arrayBase[params.keys[0]][params.keys[1]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]] !==undefined && arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]][params.keys[4]] !==undefined) {
 				retArray.val =arrayBase[params.keys[0]][params.keys[1]][params.keys[2]][params.keys[3]][params.keys[4]][params.keys[5]];
 			}
 		}
@@ -210,7 +210,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 		compile: function(element, attrs) {
 			var defaults ={'pageSize':10, 'placeholder':'search', 'scrollLoad':'0', 'loadMorePageSize':20, 'loadMoreItemsKey':'extra', 'filterFieldsDotNotation':true, 'pageScroll':0};
 			for(var xx in defaults) {
-				if(attrs[xx] ==undefined) {
+				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}
@@ -222,7 +222,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			if(attrs.loadMorePageSize <attrs.pageSize) {
 				attrs.loadMorePageSize =attrs.pageSize;
 			}
-			if(attrs.id ==undefined) {
+			if(attrs.id ===undefined) {
 				attrs.id ="uiLookup"+Math.random().toString(36).substring(7);
 			}
 			var id1 =attrs.id;
@@ -257,12 +257,12 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				'watchItemKeys':['main']
 			};
 			for(var xx in defaults) {
-				if($scope[xx] ==undefined) {
+				if($scope[xx] ===undefined) {
 					$scope[xx] =defaults[xx];
 				}
 			}
 			
-			if($scope.searchText ==undefined) {
+			if($scope.searchText ===undefined) {
 				$scope.searchText ='';
 			}
 			$scope.trigs ={'loading':false};
@@ -274,7 +274,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				//'extra':0,
 			};
 			cursors[$attrs.loadMoreItemsKey] =0;
-			if($scope.itemsRaw[$attrs.loadMoreItemsKey] ==undefined) {
+			if($scope.itemsRaw[$attrs.loadMoreItemsKey] ===undefined) {
 				$scope.itemsRaw[$attrs.loadMoreItemsKey] ={
 					'items':[]
 				};
@@ -397,11 +397,12 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				keys =array [] of which itemsRaw keys to copy over; otherwise all will be copied over
 			*/
 			function formItems(params) {
-				if(params.keys !=undefined) {
-					var keys =params.keys;
+				var keys;
+				if(params.keys !==undefined) {
+					keys =params.keys;
 				}
 				else {		//copy them all
-					var keys =[];
+					keys =[];
 					var counter =0;
 					for(var xx in $scope.itemsRaw) {
 						keys[counter] =xx;
@@ -427,10 +428,11 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				else {		//filter
 					$scope.itemsFiltered =$filter('filter')($scope.items, function(item) {
 						var match =false;
+						var curItem;
 						for(var ii=0; ii<$scope.filterFields.length; ii++) {
 							if($attrs.filterFieldsDotNotation && $scope.filterFields[ii].indexOf('.') >-1) {
 								var retArray1 =evalArray(item, {'keys':$scope.filterFields[ii]});
-								if(retArray1.val !=undefined) {
+								if(retArray1.val !==undefined) {
 									curItem =retArray1.val;
 								}
 								else {
@@ -438,8 +440,8 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 								}
 							}
 							else {
-								if(item[$scope.filterFields[ii]] !=undefined) {
-									var curItem =item[$scope.filterFields[ii]];
+								if(item[$scope.filterFields[ii]] !==undefined) {
+									curItem =item[$scope.filterFields[ii]];
 								}
 								else {
 									curItem =false;
@@ -494,7 +496,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			*/
 			//for(var xx in $scope.itemsRaw) {
 			for(var ii =0; ii<$scope.watchItemKeys.length; ii++) {
-				var xx =$scope.watchItemKeys[ii];
+				xx =$scope.watchItemKeys[ii];
 				//$scope.$watch('itemsRaw', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw['+xx+'].items[0]', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw.extra.items[0]', function(newVal, oldVal) {
@@ -562,7 +564,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			If have items in queue, they're added to itemsRaw and then formItems is re-called to re-form filtered items & update display
 			*/
 			function getMoreItems(params) {
-				if($scope.loadMore !=undefined && $scope.loadMore() !=undefined && typeof($scope.loadMore()) =='function') {		//this is an optional scope attr so don't assume it exists
+				if($scope.loadMore !==undefined && $scope.loadMore() !==undefined && typeof($scope.loadMore()) =='function') {		//this is an optional scope attr so don't assume it exists
 					/*
 					$scope.loadMore();
 					*/
@@ -604,26 +606,27 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				numItemsAdded =int of how many items were added from query
 			*/
 			function addItemsFromQueue(params) {
+				var numFromQueue;
 				var retArray ={'pageFilled':false, 'numItemsAdded':0};
 				//add items from queue (if exists)
 				if($scope.queuedItems.length >0) {
 					if(params.numToAdd) {
-						var numFromQueue =params.numToAdd;
+						numFromQueue =params.numToAdd;
 						if($scope.queuedItems.length <numFromQueue) {
 							numFromQueue =$scope.queuedItems.length;
 						}
 					}
 					else if($scope.queuedItems.length >=$attrs.pageSize) {
-						var numFromQueue =$attrs.pageSize;
+						numFromQueue =$attrs.pageSize;
 						retArray.pageFilled =true;
 					}
 					else {
-						var numFromQueue =$scope.queuedItems.length;
+						numFromQueue =$scope.queuedItems.length;
 					}
 					retArray.numItemsAdded =numFromQueue;
 					//add to itemsRaw then update filtered items
 					$scope.itemsRaw[$attrs.loadMoreItemsKey].items =$scope.itemsRaw[$attrs.loadMoreItemsKey].items.concat($scope.queuedItems.slice(0, numFromQueue));
-					if(params.partialLoad ==undefined || !params.partialLoad || numFromQueue ==$attrs.pageSize) {		//partial load can be set if need to load a new page so may still need to increment page if loading same number of items as page size
+					if(params.partialLoad ===undefined || !params.partialLoad || numFromQueue ==$attrs.pageSize) {		//partial load can be set if need to load a new page so may still need to increment page if loading same number of items as page size
 						$scope.page++;
 						//checkForScrollBar({});
 					}
@@ -651,7 +654,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				$scope.queuedItems =$scope.queuedItems.concat(results);
 				cursors[$attrs.loadMoreItemsKey] +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
 				//if don't have enough results, assume backend is done so are out of items
-				if(results.length <$attrs.loadMorePageSize || (params.loadPageSize !=undefined && results.length <params.loadPageSize)) {
+				if(results.length <$attrs.loadMorePageSize || (params.loadPageSize !==undefined && results.length <params.loadPageSize)) {
 					$scope.noMoreLoadMoreItems =true;
 				}
 				//if current page isn't full, immediately pull some from queue
@@ -664,9 +667,10 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			function checkForScrollBar(params) {
 				if($scope.scrollLoad) {
 					$timeout(function() {		//need timeout to wait for items to load / display so scroll height is correct
+						var scrollHeight;
 						if($attrs.pageScroll) {
 							//var scrollPos =$(window).scrollTop();
-							var scrollHeight =$(document).height();
+							scrollHeight =$(document).height();
 							var viewportHeight =$(window).height();
 							//console.log("pos: "+scrollPos+" height: "+scrollHeight+" height: "+height1);
 							if(scrollHeight >viewportHeight) {
@@ -679,7 +683,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 						else {
 							var ele =document.getElementById($attrs.ids.scrollContent);
 							//var scrollPos =ele.scrollTop;
-							var scrollHeight =ele.scrollHeight;
+							scrollHeight =ele.scrollHeight;
 							var height1 =ele.clientHeight;
 							//console.log('checkForScrollBar scrollHeight: '+scrollHeight+' height1: '+height1);
 							if(scrollHeight >height1) {
