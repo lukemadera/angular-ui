@@ -1,0 +1,108 @@
+@import "partials/base";
+
+@mixin slider-active
+{
+	height:8px;
+	border: solid 1px black;
+	border-radius: 4px;
+	margin-top:6px;
+	@include gradient(top, white 0%, white 37.5%, green 37.5%, green 62.5%, white 62.5%, white 100%);
+}
+
+@mixin slider-inactive
+{
+	height:8px;
+	border: solid 1px black;
+	border-radius: 5px;
+	margin-top:6px;
+	background-color: white;
+}
+
+.EM-slider
+{
+	width: 100%;
+	position: relative;
+}
+
+.EM-slider-info
+{}
+
+.EM-slider-info-label
+{}
+
+.EM-slider-info-values
+{}
+
+.EM-slider-info-values-value
+{}
+
+.EM-slider-info-values-delimiter
+{}
+
+.EM-slider-ticks
+{
+	width: 0px;
+	height: 20px;
+	border-left: solid 1px #ABABAB;
+}
+
+.EM-slider-ticks-values-container
+{}
+
+.EM-slider-ticks-value
+{
+	top:20px;
+	$width: 100px;		//Make it excessive so we never have overflow
+	width: $width;
+	margin-left: 0 - ($width / 2);		//Center the text under the tick
+	text-align: center;
+	background:transparent;		//Transparent bg so the extra width doesn't hurt us (we hope)
+}
+
+.EM-slider-bar
+{
+	min-height: 25px;
+	/* +padding, -margin to extend clickable area without taking up too much space */
+	padding-left:10px;
+	margin-left:-5px;
+	padding-right:10px;
+	margin-right:-5px;
+	cursor: pointer;
+}
+
+.EM-slider-bar-active
+{
+	@include slider-active;
+}
+
+.EM-slider-bar-inactive
+{
+	@include slider-inactive;
+}
+
+$handle-radius: 10px;
+
+.EM-slider-bar-handle
+{
+	height:$handle-radius * 2;
+	width:$handle-radius * 2;
+	border-radius: $handle-radius;
+	@include gradient(top left, #757575 0%, #FFFFFF 100%);
+	box-shadow: 1px 1px 1px 1px;
+	margin-left: 0 - $handle-radius;
+	cursor: pointer;
+}
+
+.EM-slider-bar-handle-inner
+{
+		/* 2 px between inner and outer */
+	$inner-radius: $handle-radius - 2;
+	
+	width: $inner-radius * 2;
+	height: $inner-radius * 2;
+	position: absolute;
+	top: $handle-radius - $inner-radius;
+	left: $handle-radius - $inner-radius;
+	border-radius: $inner-radius;
+	@include gradient(top left, #FFFFFF 0%, #757575 100%);
+}
