@@ -18,38 +18,38 @@
 	background-color: white;
 }
 
-.EM-slider
+.ui-slider
 {
 	width: 100%;
 	position: relative;
 }
 
-.EM-slider-info
+.ui-slider-info
 {}
 
-.EM-slider-info-label
+.ui-slider-info-label
 {}
 
-.EM-slider-info-values
+.ui-slider-info-values
 {}
 
-.EM-slider-info-values-value
+.ui-slider-info-values-value
 {}
 
-.EM-slider-info-values-delimiter
+.ui-slider-info-values-delimiter
 {}
 
-.EM-slider-ticks
+.ui-slider-ticks
 {
 	width: 0px;
 	height: 20px;
 	border-left: solid 1px #ABABAB;
 }
 
-.EM-slider-ticks-values-container
+.ui-slider-ticks-values-container
 {}
 
-.EM-slider-ticks-value
+.ui-slider-ticks-value
 {
 	top:20px;
 	$width: 100px;		//Make it excessive so we never have overflow
@@ -59,7 +59,7 @@
 	background:transparent;		//Transparent bg so the extra width doesn't hurt us (we hope)
 }
 
-.EM-slider-bar
+.ui-slider-bar
 {
 	min-height: 25px;
 	/* +padding, -margin to extend clickable area without taking up too much space */
@@ -70,19 +70,19 @@
 	cursor: pointer;
 }
 
-.EM-slider-bar-active
+.ui-slider-bar-active
 {
 	@include slider-active;
 }
 
-.EM-slider-bar-inactive
+.ui-slider-bar-inactive
 {
 	@include slider-inactive;
 }
 
 $handle-radius: 10px;
 
-.EM-slider-bar-handle
+.ui-slider-bar-handle
 {
 	height:$handle-radius * 2;
 	width:$handle-radius * 2;
@@ -93,7 +93,7 @@ $handle-radius: 10px;
 	cursor: pointer;
 }
 
-.EM-slider-bar-handle-inner
+.ui-slider-bar-handle-inner
 {
 		/* 2 px between inner and outer */
 	$inner-radius: $handle-radius - 2;

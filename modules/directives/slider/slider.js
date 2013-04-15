@@ -131,6 +131,17 @@
 //	var evtInitSlider = 'evtInitSlider' + slider_id;
 //	$scope.$broadcast(evtInitSlider, {});
 
+//When the slider is finished initializing, it will emit an event that you can listen for as follows:
+
+//	var evtSliderInitialized = 'evtSliderInitialized' + slider_id;
+//	$scope.$on(evtSliderInitialized, function(evt, params)
+//	{
+//		//params
+//			//values			//Array of the slider's values
+//			//id					//String. This slider's id
+//	});
+
+
 
 //****************************************************************************
 // A slider is composed of several elements, with the following structure. This particular example has two handles (a range slider):
@@ -603,6 +614,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			var evt_return_all_values = '';
 			var evt_set_value = '';
 			var evt_init_slider = '';
+			var evt_init_slider_finished = '';
 			
 			scale_function_poly = uiPolynomial.stringToPoly('[1, 1]');	//Init to identity, avoid undefined errors.
 			
@@ -694,6 +706,10 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				if(building_queued === true)
 				{
 					initSlider();
+				}
+				else
+				{
+					scope.$emit(evt_init_slider_finished, {'id':scope.slider_id, 'values':scope.handle_values});
 				}
 			};
 			
@@ -1582,6 +1598,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				evt_return_all_values = 'evtSliderReturnAllValues' + scope.slider_id;	//The event you must listen for to read all values from this slider.
 				evt_set_value = 'evtSliderSetValue' + scope.slider_id;								//This is the event you must broadcast to set a value on the slider
 				evt_init_slider = 'evtInitSlider' + scope.slider_id;									//This is the event you must broadcast to re-initialize the slider.
+				evt_init_slider_finished = 'evtSliderInitialized' + scope.slider_id;	//This event is emitted when the slider is done initializing.
 			};
 			
 			//End Functions
