@@ -487,7 +487,7 @@ var inst ={
 	//4.
 	blurInput: function(instId, params) {
 		if(!this.data[instId].skipBlur) {
-			console.debug('blurring '+instId);
+			//console.debug('blurring '+instId);
 			this.toggleDropdown(instId, {'hide':true});
 		}
 		this.data[instId].skipBlur =false;		//reset
