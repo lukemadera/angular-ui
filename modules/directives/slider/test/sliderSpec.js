@@ -102,7 +102,7 @@ describe('uiSlider', function ()
 			'slider_min': '1000',
 			'slider_max': '10000',
 			'precision': '-2',
-			'scale_string': '[-1, 1], [0, 1]',
+			'scale_string': '[-1, 1], [0, 1]'
 		};
 		
 		createElm(params);
