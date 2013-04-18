@@ -82,9 +82,11 @@ describe('uiSlider', function ()
 		params.opts = {};	//Use all defaults
 		
 		createElm(params);
-		
-		expect(scope.my_handles1).toBeDefined();
-		expect(scope.my_handles1.length).toEqual(1);
+		scope.$on('evtSliderInitialized' + params.id, function(evt, ret1)
+		{
+			expect(scope.my_handles1).toBeDefined();
+			expect(scope.my_handles1.length).toEqual(1);
+		});
 	});
 	
 	it('should use the specified options, initialize values, and its setter/getter events should work', function()
@@ -105,32 +107,55 @@ describe('uiSlider', function ()
 		
 		createElm(params);
 		
-		//Verify initial values were used
-		expect(scope.my_handles2.length).toEqual(4);
-		expect(scope.my_handles2[0]).toEqual(1100);
-		expect(scope.my_handles2[1]).toEqual(3500);
-		expect(scope.my_handles2[2]).toEqual(7300);
-		expect(scope.my_handles2[3]).toEqual(9000);
+		var initial = true;
 		
-		//Test events
-		scope.$broadcast('evtSliderGetValue' + params.id, {'handle' : 2});		//Get third handle
-		scope.$on('evtSliderReturnValue' + params.id, function(evt, ret)
+		scope.$on('evtSliderInitialized' + params.id, function(evt, ret0)
 		{
-			expect(ret.value).toEqual(scope.my_handles2[2]);
+			if(initial === true)
+			{
+				initial = false;
+				
+				//Verify initial values were used
+				expect(scope.my_handles2.length).toEqual(4);
+				expect(scope.my_handles2[0]).toEqual(1100);
+				expect(scope.my_handles2[1]).toEqual(3500);
+				expect(scope.my_handles2[2]).toEqual(7300);
+				expect(scope.my_handles2[3]).toEqual(9000);
+				
+				//Test events
+				scope.$broadcast('evtSliderGetValue' + params.id, {'handle' : 2});		//Get third handle
+				scope.$on('evtSliderReturnValue' + params.id, function(evt, ret)
+				{
+					expect(ret.value).toEqual(scope.my_handles2[2]);
+				});
+				
+				scope.$broadcast('evtSliderGetAllValues' + params.id, {});	//Get all handles
+				scope.$on('evtSliderReturnAllValues' + params.id, function(evt, ret1)
+				{
+					expect(ret1.values.length).toEqual(4);
+					expect(ret1.values[0]).toEqual(scope.my_handles2[0]);
+					expect(ret1.values[1]).toEqual(scope.my_handles2[1]);
+					expect(ret1.values[2]).toEqual(scope.my_handles2[2]);
+					expect(ret1.values[3]).toEqual(scope.my_handles2[3]);
+					
+					//Set a handle
+					scope.$broadcast('evtSliderSetValue' + params.id, {'handle' : 0, 'value' :1200});
+					expect(scope.my_handles2[0]).toEqual(1200);
+					
+					//Set all handles then re-init
+					scope.my_handles2 = [1300, 3600, 7400, 9100];
+					scope.$broadcast('evtInitSlider' + params.id, {});
+					scope.$on('evtSliderInitialized' + params.id, function(evt, ret2)
+					{
+						expect(ret2.id).toEqual(params.id);
+						expect(ret2.values.length).toEqual(4);
+						expect(ret2.values[0]).toEqual(scope.my_handles2[0]);
+						expect(ret2.values[1]).toEqual(scope.my_handles2[1]);
+						expect(ret2.values[2]).toEqual(scope.my_handles2[2]);
+						expect(ret2.values[3]).toEqual(scope.my_handles2[3]);
+					});
+				});
+			}
 		});
-		
-		scope.$broadcast('evtSliderGetAllValues' + params.id, {});	//Get all handles
-		scope.$on('evtSliderReturnAllValues' + params.id, function(evt, ret)
-		{
-			expect(ret.values.length).toEqual(4);
-			expect(ret.values[0]).toEqual(scope.my_handles2[0]);
-			expect(ret.values[1]).toEqual(scope.my_handles2[1]);
-			expect(ret.values[2]).toEqual(scope.my_handles2[2]);
-			expect(ret.values[3]).toEqual(scope.my_handles2[3]);
-			
-			
-		});
-		
-		
 	});
 });

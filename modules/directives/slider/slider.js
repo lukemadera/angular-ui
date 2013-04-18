@@ -1670,15 +1670,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				}
 			});
 			
-			
-			initSlider();	//Init the slider
-			
-			//Have to re-init if the id changes
-			attrs.$observe('sliderId', function(value)
-			{
-				initSlider();
-			});
-			
 			//Array checker. Returns true if the argument is a scalar array []. False otherwise.
 			var isArray = function(array1)
 			{
@@ -1691,6 +1682,14 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					return false;
 				}
 			};
+			
+			initSlider();	//Init the slider
+			
+			//Have to re-init if the id changes
+			attrs.$observe('sliderId', function(value)
+			{
+				initSlider();
+			});
 			
 		}	//End: link function
 	};
