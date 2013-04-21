@@ -1,20 +1,17 @@
-//Slider directive
+/*
+Slider directive
 
-//Creates a slider on the page.
-//Example Calls:
-	//HTML:
-	//		<ui-slider slider-id = 'my-slider' slider-handle-variable = 'my_var'> </ui-slider>
-	//		<ui-slider slider-id = 'my-slider' slider-handle-variable = 'my_var' slider-opts = '{num_handles : 2, slider-min : 0, slider-max : 50}'> </ui-slider>
+Creates a slider on the page.
+Example Calls:
+	HTML:
+			<ui-slider slider-id = 'my-slider' slider-handle-variable = 'my_var'> </ui-slider>
+			<ui-slider slider-id = 'my-slider' slider-handle-variable = 'my_var' slider-opts = 'opts'> </ui-slider>
+
+	JAVASCRIPT:
+		This is an example of a full slider-opts object, with every field defined and set to its default value. You can and should remove unneeded keys.
+		This object would be defined in the controller of the html creating the slider.
+		I recommend copying and pasting this object into your controller. Then you can change its name, adjust values, and delete keys you don't need.
 	
-//Full example:
-	//HTML:
-	//		<ui-slider slider-id = 'my-slider' slider-handle-variable = 'my_var' slider-opts = 'opts'> </ui-slider>
-
-	//JAVASCRIPT:
-	//	This is an example of a full slider-opts object, with every field defined and set to its default value. You can and should remove unneeded keys.
-	//	This object would be defined in the controller of the html creating the slider.
-	//	I recommend copying and pasting this object into your controller. Then you can change its name, adjust values, and delete keys you don't need.
-/*	
 	$scope.opts = 
 	{
 		'num_handles': '1',
@@ -28,7 +25,6 @@
 		'evt_mouseup': '',
 		'slider_moveable': true,
 		'use_array': true,
-		'container_class': 'ui-slider',
 		'bar_container_class': 'ui-slider-bar',
 		'left_bg_class': 'ui-slider-bar-active',
 		'interior_bg_class': 'ui-slider-bar-active',
@@ -37,400 +33,319 @@
 		'handle_html': '<div class = "ui-slider-bar-handle-inner"></div>',
 		'units_pre': '',
 		'units_post': '',
-		'ticks_show': false,
+		'use_ticks': false,
 		'ticks_values': [slider_min, slider_max],
 		'ticks_class': 'ui-slider-ticks',
 		'ticks_values_container_class': 'ui-slider-ticks-values-container',
 		'ticks_value_class': 'ui-slider-ticks-value',
-		'info_html': '',
-		'info_show': true,
-		'info_class': 'ui-slider-info',
-		'label': '',
-		'label_class': 'ui-slider-info-label',
-		'handle_values_class': 'ui-slider-info-values',	//The div containing the various value spans
-		'handle_info_class': 'ui-slider-info-values-value',			//A span containing a handle's value
-		'delimiter': ' - ',
-		'delimiter_class': 'ui-slider-info-values-delimiter',
 	};
+
+
+****************************************************************************
+READING VALUES
+Option 1: Variable
+Use the variable you specified for slider-handle-variable
+
+Option 2: Event
+To read a value from the slider with an event, you must know the slider_id. This is necessary since there may be multiple sliders in the same parent element.
+To read a value from a single handle, you must know the handle's index. If you do not give an index, you will receive the first (leftmost) handle's value.
+Handles are zero-indexed, and arranged in increasing order from left to right.
+
+The following sample code would get the value of the 3rd handle from the left (index 2).
+
+var evtReadSliderValue = 'evtSliderGetValue' + slider_id;
+$scope.$broadcast(evtReadSliderValue, {'handle' : 2});					//tell directive to report the third handle's value
+
+var evtReceiveSliderValue = 'evtSliderReturnValue' + slider_id;
+$scope.$on(evtReceiveSliderValue, function(evt, params) {				//Listen for the directive's response
+	var handle_value = params.value;															//The directive will return {'value' : val}
+ });
+
+To read all handle values, you need only the slider_id. The directive will return a scalar array of the handle values.
+The array will be arranged in order of the handles, which should be in ascending order for the values.
+This method always returns an array, even if there's only one handle, and even if you have set opts.use_array = 'false'
+
+Sample code:
+var evtReadAllSliderValues = 'evtSliderGetAllValues' + slider_id;
+$scope.$broadcast(evtReadAllSliderValues, {});											//tell directive to report all values
+
+var evtReceiveAllSliderValues = 'evtSliderReturnAllValues' + slider_id;
+$scope.$on(evtReceiveAllSliderValues, function(evt, params) {				//Listen for the directive's response
+	var values_array = params.values;																	//The directive will return {'values' : [num1, num2, num3... ]}
+});
+
+Option 3: Mouseup event
+You can specify an opts.evt_mouseup name. If defined, an event with this name will fire whenever a handle finishes moving.
+The event will come with a params object containing the value of the most recently moved handle, among other things.
+See evt_mouseup in the documentation below for more details.
+
+
+****************************************************************************
+SETTING VALUES FROM JAVASCRIPT
+To set a value on the slider, you must know the slider_id, just as with reading values.
+
+Be careful when setting values; do not count on the directive for error checking.
+Handles should stay in order; do not place the 4th handle to the left of the 3rd, for example.
+Handles should be set to a valid slider value. Do not set a handle to a value outside the slider's range.
+For increment sliders, be wary of placing a handle at a position that is not a valid increment.
+Failing to abide by these rules will probably not cause any fatal errors, but could easily result in display problems.
+
+The directive will auto-correct the handle if the user tries to place it outside its order or outside the slider.
+The directive will not prevent you from manually setting a handle not on a valid increment, but doing so may or may not cause minor issues.
+
+Option 1 (Recommended): Use the event.
+Sample Code: Sets the leftmost handle to the value 29.3
+var evtSetSliderValue = 'evtSliderSetValue' + slider_id;
+$scope.$broadcast(evtSetSliderValue, {'handle' : 0, 'value' :29.3});
+
+Option 2 (Not Recommended): Use the handle-variable you gave when defining the slider and re-init.
+Ordinarily, the handle-variable should be treated as read-only. However, if you manually adjust the variable's values and then
+	immediately initialize the slider, the handles should adjust accordingly. In general this method will be very inefficient; use only
+	if you intend to re-initialize the slider anyway, and want to change the handles while you're at it.
+	
+Option 3: Prefill your variable
+If your handle-variable already contains values when the slider is first built, those values will be used to position the handles.
+
+****************************************************************************
+RE-INITIALIZE THE SLIDER
+To reset and reconstruct the slider, you must know the slider_id. Broadcast the event as in the sample code.
+	You should re-initialize the slider after adjusting any of the slider-opts in your controller. Otherwise, your changes
+	will not take effect. Re-initializing can also solve angular timing issues, if the directive was called before values were correctly
+	interpolated.
+	Be aware that handles will be reset upon initialization to match the values in your specified handle-variable.
+	If you wish to change a slider-option back to its default, you must either manually set it to its default value or delete the key from
+	the options array.
+	Note: The slider will re-initialize itself if it detects a change to its ID.
+
+Sample Code:
+	var evtInitSlider = 'evtInitSlider' + slider_id;
+	$scope.$broadcast(evtInitSlider, {});
+
+When the slider is finished initializing, it will emit an event that you can listen for as follows:
+
+	var evtSliderInitialized = 'evtSliderInitialized' + slider_id;
+	$scope.$on(evtSliderInitialized, function(evt, params)
+	{
+		//params
+			//values			//Array of the slider's values
+			//id					//String. This slider's id
+	});
+
+
+
+****************************************************************************
+ A slider is composed of several elements, with the following structure. This particular example has two handles (a range slider):
+	<div>							the container div. Holds the whole slider.
+		<div>							the slider-bar div. Holds the actual slider itself.
+			<div>						The slider itself. Will be as wide as the slider-bar div.
+				<div></div>				the background-left div. The area to the left of the slider's leftmost handle.
+				<div></div>				A handle div. This is the leftmost handle.
+				<div></div>				Another handle.
+				<div></div>				the background-interior div. The area between slider handles.
+				<div></div>				the background-right div. The area to the right of the slider's rightmost handle.
+				<div>
+					<div></div>				A tick on the slider
+					<div></div>				Another tick
+				</div>
+			<div>
+		</div>
+		<div>							Tick Values container
+			<div></div>					A tick value
+			<div></div>					A tick value
+		</div>
+	</div>
+
+
+The slider may be defined using the following attributes:
+
+REQUIRED attributes:
+slider-id: A string. Use it to distinguish this slider from others when reading or writing handle values.
+	Note: This will be the id of the slider's container div.
+	Will also be used to create ids for the slider's handles so that jQuery events can be bound to them.
+	Ex: slider-id = 'slider1'
+	
+slider-handle-variable: A name of a variable in the parent scope. This variable will be filled with a scalar array of the values of the handles on the slider.
+	Handles are zero-indexed and increase from left to right. Even if there is only one handle, this will still be an ARRAY by default (see the use_array attribute).
+	The binding is bi-directional, i.e. changing the variable in the parent will alter a corresponding array in the slider's scope. However, I strongly recommend
+	that users treat the parent's variable as read-only, since changing it yourself will almost certainly not have the effect you intended in the slider, and could
+	potentially cause errors (unless you re-initialize the slider immediately). If you wish to change a slider value, use the method outlined under SETTING VALUES above instead.
+	Problems could result if this attribute is not specified for two or more sliders with the same immediate parent scope. Thus, this attribute is required.
+		The variable may be pre-filled with an array of default values, which will then be used to start the handles at the given positions. Be sure the values are valid.
+		Due to timing issues, however, I'm not necessarily convinced that this will always work as intended.
+		It certainly WON'T work if the variable is filled via a timeout or some other delay. It needs to be pre-filled before the directive linking function is called.
+		Upon initializing the slider, the handles will be set to the values stored in this variable. Beware of this when re-initializing the slider yourself.
+	Ex: slider-handle-variable = 'my_var'. Then, in the parent controller, you will have access to the first handle's value as $scope.my_var[0]. Default: 'handle_values'.
+
+OPTIONAL attributes:
+	These should be keys in an object set to the 'slider-opts' attribute.
+	It is highly recommended that you define this object in your javascript controller, rather than directly in the html.
+	Defining it in html still works, but you may run into trouble with special character exception errors when using certain attributes (like handle_html).
+	Furthermore, defining it in html causes angular to fire thousands of digests whenever the user interacts with the slider.
+	This doesn't cause errors, but it's not good for performance. It also overflows the console's error log, which is annoying.
+
+num_handles: Number of handles for the slider to have. A positive integer. May be input as number or string.
+	Ex: num_handles : '2'. Default: '1'
+	
+slider_min: Minimum value for the slider. A number. May be input as number or string.
+	Ex: slider_min : '25.5'. Default: '0'
+	
+slider_max: Maximum value for the slider. A number. May be input as number or string.
+	Ex: slider_max: '74'. Default: '100'
+
+precision: Integer. Tells the slider how far past the decimal point to go when displaying/reporting values. Affects internal accuracy. Negative values allowed.
+	May be input as number or string.
+	A precision of 2 would cause 1.236 to be stored and reported as 1.24. A precision of -2 would cause 1234 to be stored and reported as 1200.
+	Ex: precision: '2'. Default: '0'
+	Protip: You can use this attribute to create continuous-motion sliders with power-of-ten increments.
+
+scale_string: A ~ delimited STRING of arrays specifying the function to use to map the position on the slider to a value on the slider.
+Use this attribute to define non-linear continuous sliders. Meaningless for increment sliders.
+The function should be a non-decreasing mathematical function passing through (0, 0) and (1, 1), where the first coordinate represents
+the slider's left% as a decimal (a number between 0 and 1, with 0 being the left edge of the slider, 1 being the right edge of the slider)
+and the second represents the slider's values, linearly mapped to the interval [0, 1], with 0 = slider_min, 1 = slider_max.
+Input format: "[coefficient, exponent]~[coefficient, exponent]~..."
+Example: [1, .5] defines the function f(x) = 1 * x^(.5), which in turn means the slider progresses through values more quickly on the left than on the right,
+	with the halfway point at 25% of the slider's length. The default is a linear slider: f(x) = x
+	Limitations: Can only use polynomial functions. Non-integer exponents are allowed. Negative exponents are not allowed (would cause division-by-zero error).
+	Again, be sure that your function goes through (0, 0) and (1, 1), and is never decreasing on [0, 1], or your slider will not make sense!
+	Note - a strictly non-increasing function on [0, 1] passing through (0, 1) and (1, 0) would also be valid*.
+		*Protip: Use such a function to place the maximum on the left and the minimum on the right.
+		Mathematician's Protip: If you must use a non-polynomial function, use that function's Taylor series. If you don't understand Taylor series, hire a math major.
+	Ex: scale_string: '[1, 2]'. Default: '[1, 1]'
+	
+zero_method: String, either "newton" or "bisection". Defines what method to use when converting a slider value to a left% on the slider using the given scale polynomial.
+	The default behavior is "newton": Newton's method is used to find a zero. If it fails, the bisection method is then used.
+	Newton's method is generally significantly faster, but may fail for certain polynomials. The bisection method is slower, but guaranteed to succeed if your slider's
+	polynomial satisfies the criteria above, namely: non-decreasing continuous and passing through (0, 0) and (1, 1), or non-increasing continuous and passing through
+	(0, 1) and (1, 0).
+	If Newton's method is consistently failing for your function (an error message will be displayed in the console each time it fails), you can set this attribute
+	to "bisection" to skip Newton's method and go straight to bisection, for a performance boost.
+	Ex: zero_method: 'bisection'. Default: 'newton'
+	
+increment: A positive number. May be input as number or string.
+	If this attribute is set, the handles on the slider will snap to increments of this number,
+	disallowing intermediate values.
+	The increments are determined starting from the leftmost point of the slider (slider_min).
+	The maximum point of the slider need not be one of these increments.
+	If this attribute is set, the scale_string attribute is meaningless.
+	If this attribute is not set, the slider will be continous.
+	Make sure you have the resolution to correctly display all your increments! You can't fit 1000 points on a slider that's only 100 pixels wide.
+	Ex: slider-increment = '2'. Default: '0' (continuous)
+
+user_values: A scalar array [] of values for the slider. If this attribute is specified, the slider automatically becomes an increment slider,
+	with the values in the array evenly spread out along it, in their given order.
+	Note: The increment, slider_min, slider_max, scale_string, and precision attributes are meaningless if this attribute is set.
+	There are several ways to define the entries of this array:
+		1) Make the entries the values. Ex: user_values: [25, 83, 'Stephen Colbert', 'Johnny']
+		2) Make the entry an object with a 'val' property. Ex: user_values: [{'val': 25}, {'val': 83}, {'val': 'Stephen Colbert'}, {'val': 'Johnny'}]
+		3) Make the entry an object with 'val' and 'name' properties. Ex: user_values: [{'val': 25, 'name': "Twenty-five"}, {'val': 1230, 'name':"12:30PM"}]
+	The 'val' property is what will be returned to the user whenever they look up a value. The 'name' property is what the slider will write to the page when
+	displaying a value on its own.
+	Regardless of the input format, all entries will be internally converted to the third format. If 'name' is undefined, 'val' is used as the 'name'.
+	Each entry is independent. You may use any of the three formats for an entry, regardless of the format used for neighboring entries.
+	Ex: user_values: '[25, {'val': 1230, 'name':"12:30PM"}, "Stephen Colbert", {'val': "Johnny"}]. This would create a slider with 4 increments. Default: ''
+
+evt_mouseup: Name of an event to fire when a handle is released, so you can listen for it with $scope.$on elsewhere.
+	Also fires after the user clicks the slider to move a handle.
+	Ex: evt_mouseup: 'evtHandleStop'. Default: '' (no event fires)
+	When fired, the event will come with a params object holding the following information:
+		params
+			num_handles				//Integer. Number of handles on this slider
+			id								//String. ID of the slider
+			handle						//Index of the most recently moved handle.
+			value							//New value of the handle
+
+slider_moveable: Boolean. True iff there is a chance that the slider may move about the page. May be input as boolean or string.
+This is very important because moving the handles depends on the position of the mouse. When the slider is first touched, jquery is used to determine
+the slider's width and horizontal offsets, so that the mouse's coordinates can be translated to a position on the slider.
+If at any time after the initial definition of these offsets, the slider's position or width on the page changes, then the offsets need to be reset.
+So, if this value is set to true, the slider will recalculate the offsets every time the user interacts with the slider.
+Set this value to false (for a small efficiency boost) only if you are sure that the slider (and its containing div) will not move around.
+	Ex: slider_moveable: 'false'.	Default: 'true'
+
+use_array: Boolean. False iff the slider should treat single-handle sliders as a special case, returning the value rather than a single-element array of values.
+	Do NOT set this attribute to 'false' if the slider has more than one handle!! This would make no sense and could also cause errors.
+	May be input as boolean or string.
+	Ex: use_array: 'false'. Default: 'true'
+
+bar_container_class: Class for the slider bar container. The (inner) width of this element will determine the width of the slider.
+	Note: If you set this attribute, the container will have 0 height unless you give it a height.
+	Ex: bar_container_class : 'my-slider-bar'. Default: 'ui-slider-bar'
+	
+left_bg_class: Class for the slider area to the left of the leftmost handle. Use to style said area.
+	Ex: left_bg_class : 'my-slider-left-area'. Default: 'ui-slider-bar-active'
+
+interior_bg_class: Class for the slider area between handles. Use to style said area (does not exist if only one handle)
+	Ex: interior_bg_class: 'my-slider-interior-area'. Default: 'ui-slider-bar-active'
+	Protip: Use nth-of-type selectors to target individual interior areas if there are 3 or more handles.
+
+right_bg_class: Class for the slider area to the right of the rightmost handle. Use to style said area.
+	Ex: right_bg_class: 'my-slider-right-area'. Default: 'ui-slider-bar-inactive'
+
+handle_class: class for the handles. Use to style them.
+	Ex: handle_class: 'my-slider-handles'. Default: 'ui-slider-bar-handle'
+	Protip: Use nth-of-type selectors to target individual handles.
+	Note: If you're going to use your own handle styles, I strongly recommend giving the handles "margin-left: -Xpx;",
+		where X is half the handle's width. This will align the middle of the handle with the value it represents.
+
+handle_html: A string of html. Use this attribute to put something inside a handle.
+ By default, the same html will be placed in each handle. However, you may specify different html for each handle by using a ~ delimited string.
+ Limitations: Can only use plain html - no angular directives or scope variables allowed, unless they are evaluated before being sent to this directive.
+	Exception: A handle's value can be displayed using '$$value'
+	Ex: handle_html: '<div class = "my-handle-interior"> </div>'						//This html is applied to every single handle
+	Ex: handle_html: '<div> 1 </div>~<div> 2 </div>'												//First handle has a 1 in it, second has a 2. Any additional handles have no inner html.
+	Ex: handle_html: '<div> $$value </div>'																	//Each handle will have its value displayed inside itself.
+	Default: '<div class = "ui-slider-bar-handle-inner"></div>'
+	
+units_pre: String, placed before values that the slider writes to the page.
+Does not affect values returned to the user.
+	Ex: units_pre: '$'. Default: ''
+
+units_post: String, placed immediately after values that the slider writes to the page.
+Does not affect values returned to the user.
+	Ex: units_post: ' meters/second'. Default: ''
+		
+use_ticks: Boolean. True iff ticks should be shown. May be input as boolean or string.
+	Ex: use_ticks: 'true'. Default: 'false'
+
+ticks_values: Array of slider values at which to display ticks, and what to display at that tick. Meaningless if use_ticks is false.
+	There are several ways to define the entries of this array, precisely as with user_values:
+		1) Make the entries the values. Ex: ticks_values: [25, 83, 47, 100]
+		2) Make the entry an object with a 'val' property. Ex: ticks_values: [{'val': 25}, {'val': 83}, {'val': 47}, {'val': 100}]
+		3) Make the entry an object with 'val' and 'name' properties. Ex: ticks_values: [{'val': 25, 'name': "Twenty-five"}, {'val': 83, 'name':"83 m/s"}]
+	In the first and second case, the value displayed below the tick will be the value itself prefixed by units_pre and suffixed by units_post.
+	In the third case, the value displayed below the tick will be exactly the 'name'.
+	The user is responsible	for ensuring that each 'value' exists on the slider,
+	particularly in the case of increment sliders and sliders with user-defined values.
+	By default, the slider's minimum value and maximum value will be the only ticks shown.
+	Note: It is recommended (but not necessary) that the values in this array be sorted from least (leftmost) to greatest (rightmost).
+	This will keep the html in a logical order, so that nth-child selectors on the ticks' classes will make more sense.
+	Ex: ticks_values:[0, 25, 50, 75, 100]. Default: [slider_min, slider_max]
+
+ticks_class: String. Class name for the ticks divs. Use to style them.
+	A tick is just a div. Its left edge is at the position of the specified value, inside the slider.
+	Protip: Use nth-of-type selectors to target individual ticks.
+	Ex: ticks_class: 'my-slider-ticks'. Default: 'ui-slider-ticks'
+
+ticks_values_container_class: String. Class name for the div containing the tick values. This div has position:relative and is placed immediately
+	after the slider in the html, meaning it is on top of the slider itself.
+	Ex: ticks_values_container_class: 'my-slider-ticks-container'. Default: 'ui-slider-ticks-values-container'
+	
+ticks_value_class: String. Class name for the tick values divs. Use to style them.
+	These divs are absolutely positioned with their left edge aligned with the tick.
+	The default class gives them large widths, transparent backgrounds, top, negative margin-left (half the width), and text-align:center in order
+	to ensure that the value is centered below the tick. Therefore, if you use your own class,
+	be aware that you will have to re-position the values yourself.
+	Protip: Use nth-of-type selectors to target individual ticks.
+	Protip: Use negative 'top' css to place the tick values above the slider.
+	Ex: ticks_min_class: 'my-slider-ticks-value'. Default: 'ui-slider-ticks-value'
 */
 
-//****************************************************************************
-//READING VALUES
-//Option 1:
-//Use the variable you specified for slider-handle-variable
-
-//Option 2:
-//To read a value from the slider, you must know the slider_id. This is necessary since there may be multiple sliders in the same parent element.
-//To read a value from a single handle, you must know the handle's index. If you do not give an index, you will receive the first (leftmost) handle's value.
-//Handles are zero-indexed, and arranged in increasing order from left to right.
-
-//The following sample code would get the value of the 3rd handle from the left (index 2).
-
-//var evtReadSliderValue = 'evtSliderGetValue' + slider_id;
-//$scope.$broadcast(evtReadSliderValue, {'handle' : 2});					//tell directive to report the third handle's value
-
-//var evtReceiveSliderValue = 'evtSliderReturnValue' + slider_id;
-//$scope.$on(evtReceiveSliderValue, function(evt, params) {				//Listen for the directive's response
-//	var handle_value = params.value;															//The directive will return {'value' : val}
-// });
-
-//To read all handle values, you need only the slider_id. The directive will return a scalar array of the handle values.
-//The array will be arranged in order of the handles, which should be in ascending order for the values.
-//This method always returns an array, even if there's only one handle, and even if you have set opts.use_array = 'false'
-
-//Sample code:
-//var evtReadAllSliderValues = 'evtSliderGetAllValues' + slider_id;
-//$scope.$broadcast(evtReadAllSliderValues, {});											//tell directive to report all values
-
-//var evtReceiveAllSliderValues = 'evtSliderReturnAllValues' + slider_id;
-//$scope.$on(evtReceiveAllSliderValues, function(evt, params) {				//Listen for the directive's response
-//	var values_array = params.values;																	//The directive will return {'values' : [num1, num2, num3... ]}
-// });
-
-//Option 3:
-//You can specify an opts.evt_mouseup name. If defined, an event with this name will fire whenever a handle finishes moving.
-//The event will come with a params object containing, among other things, the value of the most recently moved handle.
-//See evt_mouseup in the documentation below for more details.
-
-
-//****************************************************************************
-//SETTING VALUES
-//To set a value on the slider, you must know the slider_id, just as with reading values.
-
-//Be careful when setting values; do not count on the directive for error checking.
-//Handles should stay in order; do not place the 4th handle to the left of the 3rd, for example.
-//Handles should be set to a valid slider value. Do not set a handle to a value outside the slider's range.
-//For increment sliders, be wary of placing a handle at a position that is not a valid increment.
-//Failing to abide by these rules will probably not cause any fatal errors, but could easily result in display problems.
-
-//The directive will auto-correct the handle if the user tries to place it outside its order or outside the slider.
-//The directive will not prevent you from manually setting a handle not on a valid increment, but doing so may or may not cause minor issues.
-
-//Option 1 (Recommended): Use the event.
-//Sample Code: Sets the leftmost handle to the value 29.3
-//var evtSetSliderValue = 'evtSliderSetValue' + slider_id;
-//$scope.$broadcast(evtSetSliderValue, {'handle' : 0, 'value' :29.3});
-
-//Option 2 (Not Recommended): Use the handle-variable you gave when defining the slider and re-init.
-//Ordinarily, the handle-variable should be treated as read-only. However, if you manually adjust the variable's values and then
-//	immediately initialize the slider, the handles should adjust accordingly. In general this method will be very inefficient; use only
-//	if you intend to re-initialize the slider anyway, and want to change the handles while you're at it.
-
-//****************************************************************************
-//RE-INITIALIZE THE SLIDER
-//To reset and reconstruct the slider, you must know the slider_id. Broadcast the event as in the sample code.
-//	You should re-initialize the slider after adjusting any of the slider-opts in your controller. Otherwise, your changes
-//	will not take effect. Re-initializing can also solve angular timing issues, if the directive was called before values were correctly
-//	interpolated.
-//	Be aware that handles will be reset upon initialization to match the values in your specified handle-variable.
-//	If you wish to change a slider-option back to its default, you must either manually set it to its default value or delete the key from
-//	the options array.
-//	Note: The slider will re-initialize itself if it detects a change to its ID.
-
-//Sample Code:
-//	var evtInitSlider = 'evtInitSlider' + slider_id;
-//	$scope.$broadcast(evtInitSlider, {});
-
-//When the slider is finished initializing, it will emit an event that you can listen for as follows:
-
-//	var evtSliderInitialized = 'evtSliderInitialized' + slider_id;
-//	$scope.$on(evtSliderInitialized, function(evt, params)
-//	{
-//		//params
-//			//values			//Array of the slider's values
-//			//id					//String. This slider's id
-//	});
-
-
-
-//****************************************************************************
-// A slider is composed of several elements, with the following structure. This particular example has two handles (a range slider):
-//	<div>									//the container div. Holds the whole slider.
-//		<div>								//the info div. container for the slider's label, values, etc.
-//			<div>							//the label div. holds the label for the slider, if one exists.
-//			</div>
-
-//			<div>							//the handle-values div. Holds the various handle-info spans, plus delimiters.
-//				<span>					//A handle-info span. Each handle on the slider has one. Shows the handle's value.
-//					<span> slider-delimiter </span>			//A delimiter span. Placed in-between handle-info spans. Default delimiter is ' - '. First delimiter is hidden.
-//					<span></span>												//Handle's value placed in this span.
-//				</span>
-//				<span>																//Next handle-info span, if it exists.
-//					<span> slider-delimiter </span>
-//					<span></span>
-//				</span>
-//			</div>
-
-//		</div>
-
-//		<div>								//the slider-bar div. Holds the actual slider itself.
-//			<div>							//The slider itself. Will be as wide as the slider-bar div.
-//				<div></div>				//the background-left div. The area to the left of the slider's leftmost handle.
-//				<div></div>				//A handle div. This is the leftmost handle.
-//				<div></div>				//Another handle.
-//				<div></div>				//the background-interior div. The area between slider handles.
-//				<div></div>				//the background-right div. The area to the right of the slider's rightmost handle.
-//				<div></div>				//A tick on the slider
-//				<div></div>				//Another tick
-//			<div>
-//		</div>
-//		<div>								//Tick Values container
-//			<div></div>					//A tick value
-//			<div></div>					//A tick value
-//		</div>
-//	</div>
-
-
-//The slider may be defined using the following attributes:
-
-//REQUIRED attributes:
-//slider-id: A string. Use it to distinguish this slider from others when reading or writing handle values.
-//	Note: This will be the id of the slider's container div.
-//	Will also be used to create ids for the slider's handles so that jQuery events can be bound to them.
-	//Ex: slider-id = 'slider1'
-	
-//slider-handle-variable: A name of a variable in the parent scope. This variable will be filled with a scalar array of the values of the handles on the slider.
-//	Handles are zero-indexed and increase from left to right. Even if there is only one handle, this will still be an ARRAY by default (see the use_array attribute).
-//	The binding is bi-directional, i.e. changing the variable in the parent will alter a corresponding array in the slider's scope. However, I strongly recommend
-//	that users treat the parent's variable as read-only, since changing it yourself will almost certainly not have the effect you intended in the slider, and could
-//	potentially cause errors (unless you re-initialize the slider immediately). If you wish to change a slider value, use the method outlined under SETTING VALUES above instead.
-//	Problems could result if this attribute is not specified for two or more sliders with the same immediate parent scope. Thus, this attribute is required.
-//		The variable may be pre-filled with an array of default values, which will then be used to start the handles at the given positions. Be sure the values are valid.
-//		Due to timing issues, however, I'm not necessarily convinced that this will always work as intended.
-//		It certainly WON'T work if the variable is filled via a timeout or some other delay. It needs to be pre-filled before the directive linking function is called.
-//		Upon initializing the slider, the handles will be set to the values stored in this variable. Beware of this when re-initializing the slider yourself.
-	//Ex: slider-handle-variable = 'my_var'. Then, in the parent controller, you will have access to the first handle's value as $scope.my_var[0]. Default: 'handle_values'.
-
-//OPTIONAL attributes:
-// These should be keys in an object set to the 'slider-opts' attribute.
-// All values should be converted to STRINGS except where otherwise noted.
-// It is highly recommended that you define this object in your javascript controller, rather than directly in the html.
-// Defining it in html still works, but you may run into trouble with special character exception errors when using certain attributes (like handle_html).
-// Furthermore, defining it in html causes angular to fire thousands of digests whenever the user interacts with the slider.
-// This doesn't cause errors, but it's not good for performance. It also overflows the console's error log, which is annoying.
-
-//num_handles: Number of handles for the slider to have. A positive integer. May be input as number or string.
-	//Ex: num_handles : '2'. Default: '1'
-	
-//slider_min: Minimum value for the slider. A number. May be input as number or string.
-	//Ex: slider_min : '25.5'. Default: '0'
-	
-//slider_max: Maximum value for the slider. A number. May be input as number or string.
-	//Ex: slider_max: '74'. Default: '100'
-
-//precision: Integer. Tells the slider how far past the decimal point to go when displaying/reporting values. Effects internal accuracy. Negative values allowed.
-//	May be input as number or string.
-//	A precision of 2 would cause 1.236 to be stored and reported as 1.24. A precision of -2 would cause 1234 to be stored and reported as 1200.
-	//Ex: precision: '2'. Default: '0'
-	//Protip: You can use this attribute to create continuous-motion sliders with power-of-ten increments.
-
-//scale_string: A ~ delimited string of arrays specifying the function to use to map the position on the slider to a value on the slider.
-//Use this attribute to define non-linear continuous sliders. Meaningless for increment sliders.
-//The function should be a non-decreasing mathematical function passing through (0, 0) and (1, 1), where the first coordinate represents
-//the slider's left% as a decimal (a number between 0 and 1, with 0 being the left edge of the slider, 1 being the right edge of the slider)
-//and the second represents the slider's values, linearly mapped to the interval [0, 1], with 0 = slider_min, 1 = slider_max.
-//Input format: "[coefficient, exponent]~[coefficient, exponent]~..."
-//Example: [1, .5] defines the function f(x) = 1 * x^(.5), which in turn means the slider progresses through values more quickly on the left than on the right,
-//	with the halfway point at 25% of the slider's length. The default is a linear slider: f(x) = x
-//	Limitations: Can only use polynomial functions. Non-integer exponents are allowed. Negative exponents are not allowed (would cause division-by-zero error).
-//	Again, be sure that your function goes through (0, 0) and (1, 1), and is never decreasing on [0, 1], or your slider will not make sense!
-//	Note - a strictly non-increasing function on [0, 1] passing through (0, 1) and (1, 0) would also be valid*.
-//		*Protip: Use such a function to place the maximum on the left and the minimum on the right.
-//		Mathematician's Protip: If you must use a non-polynomial function, use that function's Taylor series. If you don't understand Taylor series, hire a math major.
-	//Ex: scale_string: '[1, 2]'. Default: '[1, 1]'
-	
-//zero_method: String, either "newton" or "bisection". Defines what method to use when converting a slider value to a left% on the slider using the given scale polynomial.
-//	The default behavior is "newton": Newton's method is used to find a zero. If it fails, the bisection method is then used.
-//	Newton's method is generally significantly faster, but may fail for certain polynomials. The bisection method is slower, but guaranteed to succeed if your slider's
-//	polynomial satisfies the criteria above, namely: non-decreasing continuous and passing through (0, 0) and (1, 1), or non-increasing continuous and passing through
-//	(0, 1) and (1, 0).
-//	If Newton's method is consistently failing for your function (an error message will be displayed in the console each time it fails), you can set this attribute
-//	to "bisection" to skip Newton's method and go straight to bisection, for a performance boost.
-	//Ex: zero_method: 'bisection'. Default: 'newton'
-	
-//increment: A positive number. May be input as number or string.
-//	If this attribute is set, the handles on the slider will snap to increments of this number,
-//	disallowing intermediate values.
-//	The increments are determined starting from the leftmost point of the slider (slider_min).
-//	The maximum point of the slider need not be one of these increments.
-//	If this attribute is set, the scale_string attribute is meaningless.
-//	If this attribute is not set, the slider will be continous.
-//	Make sure you have the resolution to correctly display all your increments! You can't fit 1000 points on a slider that's only 100 pixels wide.
-	//Ex: slider-increment = '2'. Default: '0' (continuous)
-
-//user_values: A scalar array [] of values for the slider. If this attribute is specified, the slider automatically becomes an increment slider,
-//	with the values in the array evenly spread out along it, in their given order.
-//	Note: The increment, slider_min, slider_max, scale_string, and precision attributes are meaningless if this attribute is set.
-//	There are several ways to define the entries of this array:
-//		1) Make the entries the values. Ex: user_values: [25, 83, 'Stephen Colbert', 'Johnny']
-//		2) Make the entry an object with a 'val' property. Ex: user_values: [{'val': 25}, {'val': 83}, {'val': 'Stephen Colbert'}, {'val': 'Johnny'}]
-//		3) Make the entry an object with 'val' and 'name' properties. Ex: user_values: [{'val': 25, 'name': "Twenty-five"}, {'val': 1230, 'name':"12:30PM"}]
-//	The 'val' property is what will be returned to the user whenever they look up a value. The 'name' property is what the slider will write to the page when
-//	displaying a value on its own.
-//	Regardless of the input format, all entries will be internally converted to the third format. If 'name' is undefined, 'val' is used as the 'name'.
-//	Each entry is independent. You may use any of the three formats for an entry, regardless of the format used for neighboring entries.
-	//Ex: user_values: '[25, {'val': 1230, 'name':"12:30PM"}, "Stephen Colbert", {'val': "Johnny"}]. This would create a slider with 4 increments. Default: ''
-
-//evt_mouseup: Name of an event to fire when a handle is released, so you can listen for it with $scope.$on elsewhere.
-//	Also fires after the user clicks the slider to move a handle.
-	//Ex: evt_mouseup: 'evtHandleStop'. Default: '' (no event fires)
-	//When fired, the event will come with a params object holding the following information:
-		//params
-			//num_handles				//Integer. Number of handles on this slider
-			//id								//String. ID of the slider
-			//handle						//Index of the most recently moved handle.
-			//value							//New value of the handle
-
-//slider_moveable: Boolean. True iff there is a chance that the slider may move about the page. May be input as boolean or string.
-//This is very important because moving the handles depends on the position of the mouse. When the slider is first touched, jquery is used to determine
-//the slider's width and horizontal offsets, so that the mouse's coordinates can be translated to a position on the slider.
-//If at any time after the initial definition of these offsets, the slider's position or width on the page changes, then the offsets need to be reset.
-//So, if this value is set to true, the slider will recalculate the offsets every time the user interacts with the slider.
-//Set this value to false (for a small efficiency boost) only if you are sure that the slider (and its containing div) will not move around.
-	//Ex: slider_moveable: 'false'.	Default: 'true'
-
-//use_array: Boolean. False iff the slider should treat single-handle sliders as a special case, returning the value rather than a single-element array of values.
-//	Do NOT set this attribute to 'false' if the slider has more than one handle!! This would make no sense and could also cause errors.
-//	May be input as boolean or string.
-	//Ex: use_array: 'false'. Default: 'true'
-	
-//container_class: class for the div that contains everything. You probably won't need this.
-	//Ex: container_class: 'my-slider-container'. Default: 'ui-slider'
-
-//bar_container_class: Class for the slider bar container. The (inner) width of this element will determine the width of the slider.
-//	Note: If you set this attribute, the container will have 0 height unless you give it a height.
-	//Ex: bar_container_class : 'my-slider-bar'. Default: 'ui-slider-bar'
-	
-//left_bg_class: Class for the slider area to the left of the leftmost handle. Use to style said area.
-	//Ex: left_bg_class : 'my-slider-left-area'. Default: 'ui-slider-bar-active'
-
-//interior_bg_class: Class for the slider area between handles. Use to style said area (does not exist if only one handle)
-	//Ex: interior_bg_class: 'my-slider-interior-area'. Default: 'ui-slider-bar-active'
-	//Protip: Use nth-of-type selectors to target individual interior areas if there are 3 or more handles.
-
-//right_bg_class: Class for the slider area to the right of the rightmost handle. Use to style said area.
-	//Ex: right_bg_class: 'my-slider-right-area'. Default: 'ui-slider-bar-inactive'
-
-//handle_class: class for the handles. Use to style them.
-	//Ex: handle_class: 'my-slider-handles'. Default: 'ui-slider-bar-handle'
-	//Protip: Use nth-of-type selectors to target individual handles.
-	//Note: If you're going to use your own handle styles, I strongly recommend giving the handles "margin-left: -Xpx;",
-	//	where X is half the handle's width. This will align the middle of the handle with the value it represents.
-
-//handle_html: A string of html. Use this attribute to put something inside a handle.
-// By default, the same html will be placed in each handle. However, you may specify different html for each handle by using a ~ delimited string.
-// Limitations: Can only use plain html - no angular directives or scope variables allowed, unless they are evaluated before being sent to this directive.
-	//Exception: A handle's value can be displayed using '$$value'
-	//Ex: handle_html: '<div class = "my-handle-interior"> </div>'						//This html is applied to every single handle
-	//Ex: handle_html: '<div> 1 </div>~<div> 2 </div>'												//First handle has a 1 in it, second has a 2. Any additional handles have no inner html.
-	//Ex: handle_html: '<div> $$value </div>'																	//Each handle will have its value displayed inside itself.
-	//Default: '<div class = "ui-slider-bar-handle-inner"></div>'
-	
-//units_pre: String, placed before values that the slider writes to the page.
-//Does not affect values returned to the user.
-	//Ex: units_pre: '$'. Default: ''
-
-//units_post: String, placed immediately after values that the slider writes to the page.
-//Does not affect values returned to the user.
-	//Ex: units_post: ' meters/second'. Default: ''
-		
-//ticks_show: Boolean. True iff ticks should be shown. May be input as boolean or string.
-	//Ex: ticks_show: 'true'. Default: 'false'
-
-//ticks_values: Array of slider values at which to display ticks, and what to display at that tick. Meaningless if ticks_show is false.
-//	There are several ways to define the entries of this array, precisely as with user_values:
-//		1) Make the entries the values. Ex: ticks_values: [25, 83, 47, 100]
-//		2) Make the entry an object with a 'val' property. Ex: ticks_values: [{'val': 25}, {'val': 83}, {'val': 47}, {'val': 100}]
-//		3) Make the entry an object with 'val' and 'name' properties. Ex: ticks_values: [{'val': 25, 'name': "Twenty-five"}, {'val': 83, 'name':"83 m/s"}]
-//	In the first and second case, the value displayed below the tick will be the value itself prefixed by units_pre and suffixed by units_post.
-//	In the third case, the value displayed below the tick will be exactly the 'name'.
-//	The user is responsible	for ensuring that each 'value' exists on the slider,
-//	particularly in the case of increment sliders and sliders with user-defined values.
-//	By default, the slider's minimum value and maximum value will be the only ticks shown.
-//	Note: It is recommended (but not necessary) that the values in this array be sorted from least (leftmost) to greatest (rightmost).
-//	This will keep the html in a logical order, so that nth-child selectors on the ticks' classes will make more sense.
-	//Ex: ticks_values:[0, 25, 50, 75, 100]. Default: [slider_min, slider_max]
-
-//ticks_class: String. Class name for the ticks divs. Use to style them.
-//	A tick is just a div. Its left edge is at the position of the specified value, inside the slider.
-//	Protip: Use nth-of-type selectors to target individual ticks.
-	//Ex: ticks_class: 'my-slider-ticks'. Default: 'ui-slider-ticks'
-
-//ticks_values_container_class: String. Class name for the div containing the tick values. This div has position:relative and is placed immediately
-//	after the slider in the html, meaning it is on top of the slider itself.
-	//Ex: ticks_values_container_class: 'my-slider-ticks-container'. Default: 'ui-slider-ticks-values-container'
-	
-//ticks_value_class: String. Class name for the tick values divs. Use to style them.
-//	These divs are absolutely positioned with their left edge aligned with the tick.
-//	The default class gives them large widths, transparent backgrounds, top, negative margin-left (half the width), and text-align:center in order
-//	to ensure that the value is centered below the tick. Therefore, if you use your own class,
-//	be aware that you will have to re-position the values yourself.
-//	Protip: Use nth-of-type selectors to target individual ticks.
-//	Protip: Use negative 'top' css to place the tick values above the slider.
-	//Ex: ticks_min_class: 'my-slider-ticks-value'. Default: 'ui-slider-ticks-value'
-
-	// **************************************************************************************
-	//NOTE: The following info-related attributes are functional but deprecated.
-	//	You're probably better off setting info_show to false (hiding the default values display section), and just building
-	//	your own display without the directive's help, rather than attempting to configure this setup to fit your needs.
-	//	You should have the necessary values available in your handle-variable.
-	// **************************************************************************************
-	
-//info_html: A string of html, defining how to display the handle info and labels.
-// By setting this attribute, the default info section is hidden and the user takes full responisbility for the display of the slider values.
-// If this attribute is set, all other info-related attributes (labels, handle_info/values classes, delimiters, etc.) are meaningless.
-// The info_class attribute still applies, however; the html you define will be wrapped in a div with this class.
-// The value of a handle may be referenced in this string using '$$valueN', where N is the index of the handle in question.
-// Remember that handles are zero-indexed and arranged in increasing order from left to right.
-// Limitations: Can only use plain html - no angular directives or scope variables, unless they are evaluated before being sent to this directive.
-// Defining your own info section may or may not result in a noticeable decrease in performance, especially while dragging a handle. Be warned.
-	//Ex: info_html: '<div class = 'my-slider-info'> <div class = 'my-label'> Price: $ <span> $$value0 </span> </div></div>'.		Default: ''
-	
-//info_show: Boolean. False iff the info div is hidden. Use to make the labels section disappear. May be input as boolean or string.
-	//Ex: info_show: 'false'. Default: 'true'
-	//Tip: Ignore this attribute unless you want to hide the info div. (You can easily make your own, elsewhere)
-	
-//info_class: Class for the labels section. Use to position or otherwise style this area.
-	//Ex: info_class: 'my-slider-info-container'. Default: 'ui-slider-info'
-
-//label: Text to put in the slider label div.
-	//Ex: label: 'Price range:'. Default: ''
-
-//label_class: class for the label div. Use to style it.
-	//Ex: label_class: 'my-label-class'. Default: 'ui-slider-info-label'
-	
-//handle_values_class: class for the values section. Use to style it.
-	//Ex: handle_values_class: 'my-handle-values-display'. Default: 'ui-slider-info-values'
-
-//handle_info_class: class for the handle info spans. Use to style them.
-	//Ex: handle_info_class: 'my-handle-info'. Default: 'ui-slider-info-values-value'
-
-//delimiter: text to place inbetween handle values. Matters only if there is more than 1 handle.
-	//Ex: delimiter: ' < '. Default: ' - '
-
-//delimiter_class: class for the delimiter spans. Use to style them.
-	//Ex: delimiter_class: 'my-delimiter'. Default: 'ui-slider-info-values-delimiter'
-	
 angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSliderService', function(uiPolynomial, uiSliderService)
 {
 	var template_html = '';
 
 	template_html += "<div id = '{{slider_id}}' ng-mousemove = 'mousemoveHandler($event); $event.preventDefault()' class = '{{container_class}}'>";
-	
-		//Default info section
-		template_html += "<div ng-show = 'info_show' class = '{{info_class}}'>";
-			template_html += "<div class = '{{label_class}}'> {{label}} </div>";
-		
-			template_html += "<div class = '{{handle_values_class}}'>";
-				template_html += "<span class = '{{handle_info_class}}' ng-repeat = 'handle in handles'>";
-					template_html += "<span class = '{{delimiter_class}}' ng-hide = '$first'> {{delimiter}} </span>";
-					template_html += "<span> {{units_pre + handle.display_value + units_post}} </span>";
-				template_html += "</span>";
-			template_html += "</div>";	
-		template_html += "</div>";
-		
-		//User-defined info section
-		template_html += "<div ng-show = 'user_info_show' class = '{{info_class}}' ng-bind-html-unsafe = 'user_info_html'></div>";
 		
 		template_html += "<div ng-click = 'barClickHandler($event)' class = '{{bar_container_class}}' style = '{{bar_container_style}}'>";
 			template_html += "<div id = '{{slider_id}}SliderBar' style = '{{slider_bar_style}}'>";
@@ -439,11 +354,11 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				template_html += "<div ng-repeat = 'interior in interiors' class = '{{interior_bg_class}}' style = 'left: {{interior.left}}%; width: {{interior.width}}%; {{interior_bg_style}}'> </div>";
 				template_html += "<div class = '{{right_bg_class}}' style = 'width:{{right_bg_width}}%; {{right_bg_style}}'> </div>";
 				template_html += "<div>";			//Dummy div to wrap ticks, so nth-of-type selectors will work (they ought to work without the wrapper, but don't)
-					template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_class}}' style = 'position: absolute; left:{{tick.left}}%;'> </div>";		//If ticks_show not true, scope.ticks will be empty. Thus we don't need an ng-show here.
+					template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_class}}' style = 'position: absolute; left:{{tick.left}}%;'> </div>";		//If use_ticks not true, scope.ticks will be empty. Thus we don't need an ng-show here.
 				template_html += "</div>";
 			template_html += "</div>";
 			
-			template_html += "<div class = '{{ticks_values_container_class}}' style = 'position: relative;' ng-show = 'ticks_show'>";
+			template_html += "<div class = '{{ticks_values_container_class}}' style = 'position: relative;' ng-show = 'use_ticks'>";
 				template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_value_class}}' style = 'position: absolute; left:{{tick.left}}%;'> {{tick.name}} </div>";
 			template_html += "</div>";
 		template_html += "</div>";
@@ -470,102 +385,95 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			var building_slider;			//Boolean. True iff the slider is being built.
 			var building_queued;			//Boolean. True iff the slider needs to be rebuilt again.
 			var initial_values;				//If the user put an array of values in their sliderHandleVariable, then initial_values will remember
-																	//those values and set the slider's handles accordingly by default.
-																	//If the user did not pre-fill their handle variable, initial_values will be boolean false.
+												//those values and set the slider's handles accordingly by default.
+												//If the user did not pre-fill their handle variable, initial_values will be boolean false.
 			var scale_function_poly;	//A non-decreasing mathematical function passing through (0, 0) and (1, 1),
-																	//where the first coordinate represents the slider's left% as a decimal
-																	//and the second represents the slider's value, with 0 = slider_min, 1 = slider_max,
-																	//represented as a polynomial abstract data type.
-			var cur_handle;						//Index of handle currently being dragged.
-			var dragging;							//Boolean. True iff we're dragging a handle.
-			var slider_offset;				//the x-offset of the slider bar. Needed when translating the mouse's position to a slider position.
-			var slider_width;					//the width of the slider bar. Needed when translating the mouse's position to a slider position.
-			var slider_init;					//Boolean. True iff the slider_offset and slider_width values have been set.
-			var increments;						//Array of valid values for an increment slider
+											//where the first coordinate represents the slider's left% as a decimal
+											//and the second represents the slider's value, with 0 = slider_min, 1 = slider_max,
+											//represented as a polynomial abstract data type.
+			var cur_handle;				//Index of handle currently being dragged.
+			var dragging;				//Boolean. True iff we're dragging a handle.
+			var slider_offset;			//the x-offset of the slider bar. Needed when translating the mouse's position to a slider position.
+			var slider_width;			//the width of the slider bar. Needed when translating the mouse's position to a slider position.
+			var slider_init;			//Boolean. True iff the slider_offset and slider_width values have been set.
+			var increments;				//Array of valid values for an increment slider
 				//increments[ii]
-					//left											//Number in [0, 100]. The left value for this increment (as % of slider width).
-					//value											//Number in [scope.slider_min, scope.slider_max]. The value of this increment on the slider.
-			var user_values_flag;			//Boolean. True iff the user has specified values to put on the slider
+					//left					//Number in [0, 100]. The left value for this increment (as % of slider width).
+					//value					//Number in [scope.slider_min, scope.slider_max]. The value of this increment on the slider.
+			var user_values_flag;		//Boolean. True iff the user has specified values to put on the slider
 			
-			//scope variables. Variables for user-defined attributes not listed here; see above
+			/*
+			scope variables.
 			
-			//scope.handles							//Array containing handle information
-				//scope.handles[ii]
-					//zindex										//Z-index for this handle. The leftmost handle will have the highest z-index.
-																				//When handles are near the slider's left edge, this trend is reversed; the rightmost handle has the highest z-index.
-					//left											//Number between 0 and 100. The handle's % left on the slider.
-					//value											//The value of the handle. A number between scope.slider_min and scope.slider_max. Directly related to the 'left' value.
-					//display_value							//The value that gets displayed. Only different from 'value' for sliders with specific user-defined values.
-					//return_value							//The value that gets returned. Only different from 'display_value' if the user defines it as such in user_values
-					//innerhtml									//Html to place inside the handle.
-					//html_string								//Raw html string (uninterpolated) to put in handle. Equal to innerhtml iff value_in_handle == false
-					//value_in_handle						//Boolean. True iff the innerhtml has a '$$value' tag to interpolate.
+			scope.handles							Array containing handle information
+				scope.handles[ii]
+					zindex							Z-index for this handle. The leftmost handle will have the highest z-index.
+														When handles are near the slider's left edge, this trend is reversed; the rightmost handle has the higher z-index.
+					left							Number between 0 and 100. The handle's % left on the slider.
+					value							The value of the handle. A number between scope.slider_min and scope.slider_max. Directly related to the 'left' value.
+					display_value					The value that gets displayed. Only different from 'value' for sliders with specific user-defined values.
+					return_value					The value that gets returned. Only different from 'display_value' if the user defines it as such in user_values
+					innerhtml						Html to place inside the handle.
+					html_string						Raw html string (uninterpolated) to put in handle. Equal to innerhtml iff value_in_handle == false
+					value_in_handle					Boolean. True iff the innerhtml has a '$$value' tag to interpolate.
 					
-			//scope.interiors						//Array containing info for the interior divs, between the handles. This array depends entirely on the handles.
-				//scope.interiors[ii]
-					//left											//Number in [0, 100]. Left position of this interior div (as % of slider).
-					//width											//Number in [0, 100]. Width of this interior div (as % of slider).
+			scope.interiors							Array containing info for the interior divs, between the handles. This array depends entirely on the handles.
+				scope.interiors[ii]
+					left								Number in [0, 100]. Left position of this interior div (as % of slider).
+					width								Number in [0, 100]. Width of this interior div (as % of slider).
 					
-			//scope.handle_values				//Array of handle values, linked to a variable in the parent controller.
-				//scope.handle_values[ii]		//Will be identical to scope.handles[ii].display_value
+			scope.handle_values						Array of handle values, linked to a variable in the parent controller.
+				scope.handle_values[ii]				Will be identical to scope.handles[ii].display_value
 			
-			//The following variables represent user inputs. See the documentation above for more info.
-			//The variable names here correspond to keys in scope.slider_opts
+			The following variables represent user inputs. See the documentation above for more info.
+			The variable names here correspond to keys in scope.slider_opts
 			
-				//scope.num_handles										//Number of handles on the slider
-				//scope.slider_min										//Minimum value of the slider
-				//scope.slider_max										//Max value of the slider
-				//scope.left_bg_class									//Class for slider area left of the leftmost handle
-				//scope.interior_bg_class							//Class for slider area b/w handles
-				//scope.right_bg_class								//Class for slider area right of rightmost handle
-				//scope.bar_container_class						//Class for the slider bar container div
-				//scope.handle_class									//Class for the handles
-				//scope.units_pre											//Text placed before slider values
-				//scope.units_post										//Text placed after slider values
-				//scope.ticks_show										//Boolean. True iff the min/max values are displayed
-				//scope.ticks_values									//Array of values at which to place ticks
-				//scope.ticks_class										//Class for each tick div.
-				//scope.ticks_values_container_class	//Class for tick values container div
-				//scope.ticks_value_class							//Class for each tick value div
-				//scope.info_show											//Boolean. True if the default values reporting section is displayed
-				//scope.info_class										//Class for info section
-				//scope.label													//Text for the label in the info section
-				//scope.label_class										//Class for the label
-				//scope.handle_values_class						//Class for the div containing the various value spans
-				//scope.handle_info_class							//Class for a span containing a handle's value
-				//scope.delimiter											//Text to place between handle values
-				//scope.delimiter_class								//Class for delimiter div
-				//scope.container_class								//Class for the div that contains everything
-				//scope.increment											//Value to increment by, for increment sliders.
-				//scope.precision											//Integer. Decimal precision to use when storing and reporting values.
-				//scope.evt_mouseup										//Name of event to broadcast after a handle stops moving
-				//scope.slider_moveable								//Boolean. True iff the slider may change location relative to the window
-				//scope.user_values										//Array of values for the slider.
-				//scope.handle_html										//Html string to put inside handles
-				//scope.info_html											//User-defined html for the info section
-				//scope.scale_string									//~ delimited polynomial string. Defines slider's scale function
-				//scope.zero_method										//String defining which method to use to find a zero.
-				//scope.use_array											//Boolean. True iff the handle values are reported as an array.
+				scope.num_handles						Number of handles on the slider
+				scope.slider_min						Minimum value of the slider
+				scope.slider_max						Max value of the slider
+				scope.left_bg_class						Class for slider area left of the leftmost handle
+				scope.interior_bg_class					Class for slider area b/w handles
+				scope.right_bg_class					Class for slider area right of rightmost handle
+				scope.bar_container_class				Class for the slider bar container div
+				scope.handle_class						Class for the handles
+				scope.units_pre							Text placed before slider values
+				scope.units_post						Text placed after slider values
+				scope.use_ticks							Boolean. True iff the min/max values are displayed
+				scope.ticks_values						Array of values at which to place ticks
+				scope.ticks_class						Class for each tick div.
+				scope.ticks_values_container_class		Class for tick values container div
+				scope.ticks_value_class					Class for each tick value div
+				scope.increment							Value to increment by, for increment sliders.
+				scope.precision							Integer. Decimal precision to use when storing and reporting values.
+				scope.evt_mouseup						Name of event to broadcast after a handle stops moving
+				scope.slider_moveable					Boolean. True iff the slider may change location relative to the window
+				scope.user_values						Array of values for the slider.
+				scope.handle_html						Html string to put inside handles
+				scope.scale_string						~ delimited polynomial string. Defines slider's scale function
+				scope.zero_method						String defining which method to use to find a zero.
+				scope.use_array							Boolean. True iff the handle values are reported as an array.
 			
-			//scope.slider_bar_style
-			//scope.left_bg_style
-			//scope.interior_bg_style		//General styles for the slider, backgrounds and handles. (ie. 'position:absolute;', etc.)
-			//scope.right_bg_style
-			//scope.handle_style
+			scope.slider_bar_style
+			scope.left_bg_style
+			scope.interior_bg_style			Holds necessary styles for the slider, backgrounds and handles. (ie. 'position:absolute;', etc.)
+			scope.right_bg_style
+			scope.handle_style
 			
-			//scope.left_bg_width				//Number in [0, 100]. Width of left background div (as % of slider).
-			//scope.right_bg_width			//Number in [0, 100]. Width of right background div (as % of slider).
+			scope.left_bg_width				Number in [0, 100]. Width of left background div (as % of slider).
+			scope.right_bg_width			Number in [0, 100]. Width of right background div (as % of slider).
 			
-			//scope.startHandleDrag			//Mousedown handler for handles. Starts dragging the handle.
-			//scope.mousemoveHandler		//Mousemove handler for the slider container.
-			//scope.endHandleDrag				//Mouseup handler for the slider container. Ends any handle dragging.
-			//scope.ticks								//Array of ticks on the slider
-				//scope.ticks[ii]
-					//val												//Value on the slider where this tick should go
-					//name											//String to display for this tick
-					//left											//Number in [0, 100]. The left value for this tick (as % of slider width).
-			//scope.user_info_show			//Boolean. True iff the user-defined info section is shown. Default: false.
-			//scope.user_info_html			//String of html, converted from info_html, defining the user-defined info section.
+			scope.startHandleDrag			Mousedown handler for handles. Starts dragging the handle.
+			scope.mousemoveHandler			Mousemove handler for the slider container.
+			scope.endHandleDrag				Mouseup handler for the slider container. Ends any handle dragging.
+			scope.ticks						Array of ticks on the slider
+				scope.ticks[ii]
+					val							Value on the slider where this tick should go
+					name						String to display for this tick
+					left						Number in [0, 100]. The left value for this tick (as % of slider width).
+			scope.user_info_show			Boolean. True iff the user-defined info section is shown. Default: false.
+			scope.user_info_html			String of html, converted from info_html, defining the user-defined info section.
+			
+			*/
 			
 			//Define defaults
 			
@@ -581,27 +489,17 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				'handle_class': 'ui-slider-bar-handle',
 				'units_pre': '',
 				'units_post': '',
-				'ticks_show': false,
+				'use_ticks': false,
 				'ticks_class': 'ui-slider-ticks',
 				'ticks_values': 'placeholder',		//Placeholder special value
 				'ticks_values_container_class': 'ui-slider-ticks-values-container',
 				'ticks_value_class': 'ui-slider-ticks-value',
-				'info_show': true,
-				'info_class': 'ui-slider-info',
-				'label': '',
-				'label_class': 'ui-slider-info-label',
-				'handle_values_class': 'ui-slider-info-values',	//The div containing the various value spans
-				'handle_info_class': 'ui-slider-info-values-value',			//A span containing a handle's value
-				'delimiter': ' - ',
-				'delimiter_class': 'ui-slider-info-values-delimiter',
-				'container_class': 'ui-slider',
 				'increment': '0',
 				'precision': '0',
 				'evt_mouseup': '',
 				'slider_moveable': true,
 				'user_values': '',
 				'handle_html': '<div class = "ui-slider-bar-handle-inner"></div>',
-				'info_html': '',
 				'scale_string': '[1, 1]',
 				'zero_method': 'newton',
 				'use_array': true
@@ -627,6 +525,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			{
 				building_slider = true;
 				building_queued = false;
+				
 				//Fill info
 				for(var xx in defaults)
 				{
@@ -653,7 +552,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					}
 				}
 				
-				nameInterfaceEvents();				//Set the event names
+				nameInterfaceEvents();						//Set the event names
 				uiSliderService.register(scope.slider_id, endHandleDrag);		//Register the slider with the service
 				
 				scope.initial_values = false;
@@ -695,7 +594,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				parseData();
 				setStyles();
 				setHandles();
-				if(scope.ticks_show === true)		//Form ticks if necessary. Do nothing if the ticks are hidden.
+				if(scope.use_ticks === true)		//Form ticks if necessary. Do nothing if the ticks are hidden.
 				{
 					setTicks();
 				}
@@ -727,11 +626,10 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				
 				//Parse Booleans
 				scope.slider_moveable = parseBoolean(scope.slider_moveable, defaults.slider_moveable);
-				scope.info_show = parseBoolean(scope.info_show, defaults.info_show);
 				scope.use_array = parseBoolean(scope.use_array, defaults.use_array);
 				
 				user_values_flag = false;
-				//If set, parse Values and re-define other values
+				//If set, parse values and re-define other values
 				if(scope.user_values !== '' && scope.user_values !== undefined)
 				{
 					user_values_flag = true;
@@ -768,8 +666,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				slider_width = 100;			//Init to 100; will set later
 				slider_init = false;
 				increments = [];
-				scope.user_info_show = false;
-				scope.user_info_html = '';
 				
 				//Parse scale, form scale function
 				
@@ -809,7 +705,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				scope.bar_container_style = '';		//No styles needed here anymore
 				
 			};	//End setStyles
-			
 			
 			
 			var setHandles = function()
@@ -988,15 +883,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 						}
 					}
 				}
-				
-				//Parse and set up info_html if necessary, now that handles are defined.
-				if(scope.info_html !== '' && scope.info_html !== undefined)			//If the info section is user-defined
-				{
-					scope.info_show = false;				//Hide default info section
-					scope.user_info_show = true;		//Show user's info section
-					scope.user_info_html = parseInfoHtml(scope.info_html);	//Convert the user's html to actual html for ng-bind-html-unsafe
-				}
-				
 			};		//End setHandles
 
 			
@@ -1024,7 +910,8 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					if(user_values_flag === true)
 					{
 						var index;
-						for(var jj = 0; jj < scope.user_values.length; jj++)
+						var jj;
+						for(jj = 0; jj < scope.user_values.length; jj++)
 						{
 							if(scope.user_values[jj].val.toString() == scope.ticks[ii].val.toString())
 							{
@@ -1083,7 +970,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 						slider_ele.unbind('touchmove');
 						slider_ele.bind('touchmove', function(event)
 						{
-							event.preventDefault();							//? Maybe prevents default phone touchmove stuff, like scrolling?
+							event.preventDefault();					//? Maybe prevents default phone touchmove stuff, like scrolling?
 							var touch = event.originalEvent;		//? Apparently Iphones do weird stuff; make sure we have original event.
 							scope.$apply(function()
 							{
@@ -1412,10 +1299,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				
 				update_backgrounds(handle_index);
 				update_zindex(handle_index);
-				if(scope.user_info_show === true)		//If the user defined an info section
-				{
-					scope.user_info_html = parseInfoHtml(scope.info_html);	//Update it
-				}
 			};
 			
 			
@@ -1465,7 +1348,8 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			var findNearestIncrement = function(left)
 			{
 			
-			// Version 1: Takes advantage of the fact that increments are evenly spaced to calculate where the nearest increment is.
+			//Version 1: Takes advantage of the fact that increments are evenly spaced to calculate where the nearest increment is.
+			//	This version is more efficient, but will fail if the slider is ever adjusted to allow uneven increments.
 			
 			//Must check edge cases to avoid possible errors.
 			if(left >= 100)
@@ -1487,7 +1371,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			}
 			
 			
-			// Version 2: does not assume increments are evenly spaced
+			// Version 2: Does not assume increments are evenly spaced. Less efficient, but should always work.
 			/*
 				var len = increments.length;
 				var index = Math.floor(len / 2);
@@ -1527,21 +1411,6 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			
 			};
 			
-			
-			//*******************************************************************************************
-			//parseInfoHtml: takes an html string containing '$$valueN' keys and replaces them with the appropriate handle value,
-			//along with the appropriate units strings.
-			//Returns the resulting string.
-			var parseInfoHtml = function(info_html)
-			{
-				for(ii = 0; ii < scope.num_handles; ii++)
-				{
-					info_html = info_html.replace('$$value' + ii, scope.units_pre + scope.handles[ii].display_value) + scope.units_post;
-				}
-				return info_html;
-			};
-			
-			
 			//*******************************************************************************************
 			//parseHandleHtml: takes a handle index. Operates on the handle's html_string, replacing
 			//	'$$value' keys with the handle's display_value. Places the resulting string in the handle's
@@ -1580,11 +1449,12 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				
 				//Code to check for increments.
 				//Currently commented out in order to allow the user to manually place a handle at a non-increment position.
-//				if(scope.increment != 0)
-//				{
-//					new_left = findNearestIncrement(new_left);
-//				}		
-				
+				/*
+				if(scope.increment !== 0)
+				{
+					new_left = findNearestIncrement(new_left);
+				}		
+				*/
 				moveHandle(handle, new_left);
 			};
 
@@ -1592,12 +1462,12 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			//nameInterfaceEvents: sets the names for the events. Should be called whenever scope.slider_id changes.
 			var nameInterfaceEvents = function()
 			{
-				evt_get_value = 'evtSliderGetValue' + scope.slider_id;								//This is the event you must broadcast to read a value from this slider.
-				evt_return_value = 'evtSliderReturnValue' + scope.slider_id;					//The event you must listen for to read a value from this slider.
-				evt_get_all_values = 'evtSliderGetAllValues' + scope.slider_id;				//This is the event you must broadcast to read all values from this slider.
+				evt_get_value = 'evtSliderGetValue' + scope.slider_id;					//The event you must broadcast to read a value from this slider.
+				evt_return_value = 'evtSliderReturnValue' + scope.slider_id;			//The event you must listen for to read a value from this slider.
+				evt_get_all_values = 'evtSliderGetAllValues' + scope.slider_id;			//The event you must broadcast to read all values from this slider.
 				evt_return_all_values = 'evtSliderReturnAllValues' + scope.slider_id;	//The event you must listen for to read all values from this slider.
-				evt_set_value = 'evtSliderSetValue' + scope.slider_id;								//This is the event you must broadcast to set a value on the slider
-				evt_init_slider = 'evtInitSlider' + scope.slider_id;									//This is the event you must broadcast to re-initialize the slider.
+				evt_set_value = 'evtSliderSetValue' + scope.slider_id;					//The event you must broadcast to set a value on the slider
+				evt_init_slider = 'evtInitSlider' + scope.slider_id;					//The event you must broadcast to re-initialize the slider.
 				evt_init_slider_finished = 'evtSliderInitialized' + scope.slider_id;	//This event is emitted when the slider is done initializing.
 			};
 			
@@ -1671,6 +1541,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			});
 			
 			//Array checker. Returns true if the argument is a scalar array []. False otherwise.
+			//Included here in order to eliminate dependency on an external array library.
 			var isArray = function(array1)
 			{
 				if(Object.prototype.toString.apply(array1) === "[object Array]")
@@ -1696,17 +1567,17 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 }])
 .factory('uiSliderService', [function()
 {
-	
-//uiSliderService: The sole purpose of this service is to handle the slider's mouseup event.
-//When there are multiple sliders on a page, the mouseup event to end handle dragging for every single one would fire with every single mouseup. This is bad for performance.
-//This service eliminates this inefficiency; now there is a single mouseup event for all sliders, defined in this service.
-//The service calls the appropriate slider's mouseup handler to end dragging.
+/*
+uiSliderService: The sole purpose of this service is to handle the slider's mouseup event.
+When there are multiple sliders on a page, the mouseup event to end handle dragging for every single one would fire with every single mouseup. This is bad for performance.
+This service eliminates this inefficiency; now there is a single mouseup event for all sliders, defined in this service.
+The service calls the appropriate slider's mouseup handler to end dragging.
 
-//Possible issue warning: As of 4/11/2013, there is no code to determine when a slider should be deregistered with the service.
-//In theory, this could lead to memory overflow and/or reduced performance.
-//In practice, this is unlikely to cause problems. The user would have to view hundreds if not thousands of sliders, each with a unique id,
-//in a single app session without ever refreshing the page.
-
+Possible issue warning: As of 4/11/2013, there is no code to determine when a slider should be deregistered with the service.
+In theory, this could lead to memory overflow and/or reduced performance.
+In practice, this is unlikely to cause problems. The user would have to view hundreds if not thousands of sliders in a single app session,
+each with a unique id, without ever refreshing the page.
+*/
 	var inst =
 	{
 		//list of all registered sliders. Key is the slider's id. Value is the mouseup callback endHandleDrag
@@ -1774,32 +1645,33 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 }])
 .factory('uiPolynomial', [function()
 {
-	//Polynomial Function Library
-	//A polynomial is an array [] of arrays {}. Each inner array corresponds to a term:
-		//poly
-			//poly[ii]
-				//coeff				//Coefficent for this term. May be any real number.
-				//exp					//Exponent for this term. May be any real number.
+	/*
+	Polynomial Function Library
+	A polynomial is an array [] of obecjts {}. Each inner object corresponds to a term:
+		poly
+			poly[ii]
+				coeff				Coefficent for this term. May be any real number.
+				exp					Exponent for this term. May be any real number.
 
-	//Note that a polynomial's terms need not be in any particular order, and there may be
-	//multiple terms with identical exponents.
-	//Use combinePolyTerms to combine like exponents and also to sort them in ascending order.
-	//addPoly and subPoly do this automatically.
+	Note that a polynomial's terms need not be in any particular order, and there may be
+	multiple terms with identical exponents.
+	Use combinePolyTerms to combine like exponents and also to sort them in ascending order.
+	addPoly and subPoly do this automatically.
 
-	//Index:
-		//1. buildPoly
-		//2. stringToPoly
-		//3. evalPoly
-		//4. polyToFunction
-		//5. differentiatePoly
-		//6. integratePoly
-		//7. combinePolyTerms
-		//8. scalePoly
-		//9. addPoly
-		//10. subPoly
-		//11. findPolyZeroNewton
-		//12. findPolyZeroBisection
-
+	Index:
+		1. buildPoly
+		2. stringToPoly
+		3. evalPoly
+		4. polyToFunction
+		5. differentiatePoly
+		6. integratePoly
+		7. combinePolyTerms
+		8. scalePoly
+		9. addPoly
+		10. subPoly
+		11. findPolyZeroNewton
+		12. findPolyZeroBisection
+	*/
 	var inst ={
 
 		//*******************************************************************************************
