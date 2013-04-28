@@ -13,7 +13,7 @@
 	padding-top:5px;
 	text-align:center;
 }
-.ui-imageupload-input
+.ui-imageupload-input, input[type='file'].ui-imageupload-input
 {
 	/* height, padding, etc. don't work on file inputs - instead use font-size and overflow hidden of parent to just make it arbitrarily big so it fills the whole space */
 	position:absolute;
@@ -24,6 +24,7 @@
 	z-index:2;		/* so can still click it */
 	opacity:0;
 	/*filter:alpha(opacity:0);*/
+	line-height:auto;
 }
 .ui-imageupload-drag-text
 {

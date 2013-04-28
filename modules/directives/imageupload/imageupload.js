@@ -1,12 +1,12 @@
 /**
 @todo
 - do backend
-- test
+- fix ng-change to work then get rid of "FILE SELECTED" button
+- add ng-model support (then remove $scope.$emit?)
+- test (unit tests & manually w/ backend)
 - theme / style
 - modularize more (i.e. definitely put crop stuff in another directive)
 	- move html into a template?
-- unit tests
-- jshint / lint
 - document
 - do crop
 	- test
@@ -30,13 +30,13 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {String} uploadPath Path to upload file to (backend script)
 	@param {String} uploadDirectory Directory to store file in - NOTE: this must be relative to the ROOT of the server!!
 	@param {Object} imageServerKeys Items that tell what keys hold the following info after returned from backend
-		@param {String} imgFileName Key for variable that holds image file name ONLY (not the full path; uploadDirectory variable will be prepended)
+		@param {String} imgFileName Key for variable that holds image file name / partial parth ONLY (not the full path; uploadDirectory variable will be prepended). This can have a folder as part of it - i.e. 'image1.jpg' OR 'original/image1.jpg'
 		@param {Number} picHeight
 		@param {Number} picWidth
-		@param {String} imgFileNameCrop Key for variable that holds the file name of the newly cropped image
-	@param {Object} [serverParamNames] Form names to submit (so can interact with any server)
+		@param {String} imgFileNameCrop Key for variable that holds the file name of the newly cropped image. This can also have a folder in front of it - i.e. '200/image1.jpg'
+	@param {Object} [serverParamNames] Form names to submit (so can interact with any server). Note, additional information will be passed back in "fileData" object and "cropOptions" object
 		@param {String} [file ='file']
-		@param {String} [byUrl ='pp[fileUrl]']
+		@param {String} [byUrl ='fileData[fileUrl]']
 	@param {String} [uploadCropPath] (required for cropping) Path to handle the cropping (backend script)
 	@param {Object} [values]
 		@param {String} dirPath Path where image is (to show a default / initial value image the ngModel value will be appended to this path (if these both exist))
@@ -64,10 +64,25 @@ attrs
 
 EXAMPLE usage:
 partial / html:
-@todo
+<div ui-imageupload opts='uploadOpts'></div>
 
 controller / js:
-@todo
+var evtImageUpload ='TestCtrlImageUpload';
+$scope.uploadOpts =
+{
+	//'type':'byUrl',
+	'uploadPath':'/api/image/upload',
+	'uploadDirectory':'/public/uploads',
+	'uploadCropPath':'/api/image/crop',
+	'callbackInfo':{'evtName':evtImageUpload, 'args':[{'var1':'yes'}]},
+	'imageServerKeys':{'imgFileName':'fileNameSave', 'picHeight':'picHeight', 'picWidth':'picWidth', 'imgFileNameCrop':'newFileName'},		//hardcoded must match: server return data keys
+	//'htmlDisplay':"<div class='ig-form-pic-upload'><div class='ig-form-pic-upload-button'>Select Photo</div></div>",
+	'cropOptions': {'cropMaxHeight':500, 'cropMaxWidth':500},
+	//'values':{'dirPath':'/uploads'},
+};
+$scope.$on(evtImageUpload, function(evt, args) {
+	$scope.formVals.image =args[1].imgFileName;
+});
 
 //end: EXAMPLE usage
 */
@@ -214,13 +229,16 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			html+="<div>{{fileInfo.name}}</div>";
 			html+="<div>{{fileInfo.size}}</div>";
 			html+="<div>{{fileInfo.type}}</div>";
+			
+			html+="<div ng-click='fileSelected({})'>FILE SELECTED!!</div>";		//TESTING		//@todo - remove this - get ng-change to fire..
+			
 			html+="</div>";		//end: form container
 	
 			element.replaceWith(html);
 		},
 		
 		controller: function($scope, $element, $attrs) {
-			var defaults ={'cropOptions':uiImageuploadData.cropOptionsDefault, 'serverParamNames':{'file':'file', 'byUrl':'pp[fileUrl]'}, 'values':{}};
+			var defaults ={'cropOptions':uiImageuploadData.cropOptionsDefault, 'serverParamNames':{'file':'file', 'byUrl':'fileData[fileUrl]'}, 'values':{}};
 			if($scope.opts ===undefined) {
 				$scope.opts ={};
 			}
@@ -391,10 +409,10 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 						fd.append($scope.opts.serverParamNames.byUrl, fileVal);
 					else
 						fd.append($scope.opts.serverParamNames.file, document.getElementById($attrs.ids.input.file).files[0]);
-					fd.append('pp[uploadDir]', $scope.opts.uploadDirectory);
+					fd.append('fileData[uploadDir]', $scope.opts.uploadDirectory);
 					if($scope.opts.cropOptions !==undefined) {
 						for(var xx in $scope.opts.cropOptions) {
-							fd.append('pp['+xx+']', $scope.opts.cropOptions[xx]);
+							fd.append('cropOptions['+xx+']', $scope.opts.cropOptions[xx]);
 						}
 					}
 					var sendInfo =fd;
@@ -540,7 +558,8 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				{
 					var args =$scope.opts.callbackInfo.args;
 					args =args.concat(data);
-					$scope.$broadcast($scope.opts.callbackInfo.evtName, args);
+					//$scope.$broadcast($scope.opts.callbackInfo.evtName, args);
+					$scope.$emit($scope.opts.callbackInfo.evtName, args);
 				}
 				//LLoading.close({});
 				$scope.show.notify =false;
