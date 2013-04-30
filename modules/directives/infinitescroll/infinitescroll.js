@@ -127,7 +127,7 @@ controller / js:
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$compile', '$timeout', 'uiInfinitescrollData', function (uiConfig, $compile, $timeout, uiInfinitescrollData) {
+angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$timeout', 'uiInfinitescrollData', function (uiConfig, $timeout, uiInfinitescrollData) {
   return {
 		restrict: 'A',
 		transclude: true,

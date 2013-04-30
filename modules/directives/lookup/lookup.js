@@ -114,7 +114,7 @@ controller / js:
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '$compile', '$timeout', function (uiConfig, $filter, $compile, $timeout) {
+angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '$timeout', function (uiConfig, $filter, $timeout) {
 
 	/**
 	//returns the value of an array when given the array base and the keys to read
