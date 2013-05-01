@@ -1,12 +1,11 @@
 /**
 @todo
-- do backend
-- test
+- do & document backend code
+- make uploaded image show up on top of existing drop zone
+- test (unit tests & manually w/ backend)
 - theme / style
 - modularize more (i.e. definitely put crop stuff in another directive)
 	- move html into a template?
-- unit tests
-- jshint / lint
 - document
 - do crop
 	- test
@@ -26,37 +25,38 @@
 
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
-@param {Object} opts
-	@param {String} uploadPath Path to upload file to (backend script)
-	@param {String} uploadDirectory Directory to store file in - NOTE: this must be relative to the ROOT of the server!!
-	@param {Object} imageServerKeys Items that tell what keys hold the following info after returned from backend
-		@param {String} imgFileName Key for variable that holds image file name ONLY (not the full path; uploadDirectory variable will be prepended)
-		@param {Number} picHeight
-		@param {Number} picWidth
-		@param {String} imgFileNameCrop Key for variable that holds the file name of the newly cropped image
-	@param {Object} [serverParamNames] Form names to submit (so can interact with any server)
-		@param {String} [file ='file']
-		@param {String} [byUrl ='pp[fileUrl]']
-	@param {String} [uploadCropPath] (required for cropping) Path to handle the cropping (backend script)
-	@param {Object} [values]
-		@param {String} dirPath Path where image is (to show a default / initial value image the ngModel value will be appended to this path (if these both exist))
-		@param {String} src Filename (i.e. image.jpg)
-	@param {Array} [fileTypes] 1D array [] of valid file types (i.e. ['png', 'jpg', 'jpeg', 'bmp', 'gif'])
-	@param {Boolean} [useUploadButton=false] True if want to show an upload button for confirming the upload (otherwise, as soon as picture is selected, it will be uploaded & shown for a preview)
-	@param {Object} cropOptions Items with defaults for cropping
-		@param {Boolean} [crop =true] True to allow cropping
-		@param {Number} [cropAspectRatio =1] Number to indicate how to crop, 1 = square, 2 = twice as wide as tall, .5 =twice as tall as wide
-		@param {Number} [cropMinHeight =100] Minimum pixel height for cropped version
-		@param {Number} [cropMinWidth =100] Minimum pixel width for cropped version
-		@param {Number} [cropMaxHeight =300] Max pixel height for cropped version
-		@param {Number} [cropMaxWidth =300] Max pixel width for cropped version
-		@param {String} [cropDuplicateSuffix ="_crop"] Suffix to add to image for the cropped version
-	@param {Object} callbackInfo
-		@param {String} evtName Angular event name to broadcast
-		@param {Array} args Function arguments ('data' will be appended as additional argument to end)
-	//standardAjaxForUrl =boolean true if want to use jquery/standard ajax for submitting url as opposed to form data
+	@param {String} ngModel Variable for storing the file name of the uploaded file
+	@param {Object} opts
+		@param {String} uploadPath Path to upload file to (backend script)
+		@param {String} uploadDirectory Directory to store file in - NOTE: this must be relative to the ROOT of the server!!
+		@param {Object} imageServerKeys Items that tell what keys hold the following info after returned from backend
+			@param {String} imgFileName Key for variable that holds image file name / partial parth ONLY (not the full path; uploadDirectory variable will be prepended). This can have a folder as part of it - i.e. 'image1.jpg' OR 'original/image1.jpg'
+			@param {Number} picHeight
+			@param {Number} picWidth
+			@param {String} imgFileNameCrop Key for variable that holds the file name of the newly cropped image. This can also have a folder in front of it - i.e. '200/image1.jpg'
+		@param {Object} [serverParamNames] Form names to submit (so can interact with any server). Note, additional information will be passed back in "fileData" object and "cropOptions" object
+			@param {String} [file ='file']
+			@param {String} [byUrl ='fileData[fileUrl]']
+		@param {String} [uploadCropPath] (required for cropping) Path to handle the cropping (backend script)
+		@param {Object} [values]
+			@param {String} dirPath Path where image is (to show a default / initial value image the ngModel value will be appended to this path (if these both exist))
+			@param {String} src Filename (i.e. image.jpg)
+		@param {Array} [fileTypes] 1D array [] of valid file types (i.e. ['png', 'jpg', 'jpeg', 'bmp', 'gif'])
+		@param {Object} cropOptions Items with defaults for cropping
+			@param {Boolean} [crop =true] True to allow cropping
+			@param {Number} [cropAspectRatio =1] Number to indicate how to crop, 1 = square, 2 = twice as wide as tall, .5 =twice as tall as wide
+			@param {Number} [cropMinHeight =100] Minimum pixel height for cropped version
+			@param {Number} [cropMinWidth =100] Minimum pixel width for cropped version
+			@param {Number} [cropMaxHeight =300] Max pixel height for cropped version
+			@param {Number} [cropMaxWidth =300] Max pixel width for cropped version
+			@param {String} [cropDuplicateSuffix ="_crop"] Suffix to add to image for the cropped version
+		@param {Object} callbackInfo
+			@param {String} evtName Angular event name to broadcast
+			@param {Array} args Function arguments ('data' will be appended as additional argument to end)
+		//standardAjaxForUrl =boolean true if want to use jquery/standard ajax for submitting url as opposed to form data
 
 attrs
+	@param {Number} [useUploadButton=0] True if want to show an upload button for confirming the upload (otherwise, as soon as picture is selected, it will be uploaded & shown for a preview)
 	@param {String} [type =dragNDrop] What type of user interface - one of: 'dragNDrop', 'byUrl' (to paste a link from another website)
 	@param {String} [htmlDisplay] Complete html for what to put in drag box
 	@param {String} [htmlUrlInstructions] Complete html for what to put below upload by url input field
@@ -64,24 +64,45 @@ attrs
 
 EXAMPLE usage:
 partial / html:
-@todo
+<div ui-imageupload opts='uploadOpts' ng-model='image'></div>
 
 controller / js:
-@todo
+$scope.image ='';
+//NOTE: the $scope.$on evt is optional since using ngModel will automatically update this $scope value accordingly
+var evtImageUpload ='TestCtrlImageUpload';
+$scope.uploadOpts =
+{
+	//'type':'byUrl',
+	'uploadPath':'/api/image/upload',
+	'uploadDirectory':'/public/uploads',
+	'uploadCropPath':'/api/image/crop',
+	'callbackInfo':{'evtName':evtImageUpload, 'args':[{'var1':'yes'}]},
+	'imageServerKeys':{'imgFileName':'fileNameSave', 'picHeight':'picHeight', 'picWidth':'picWidth', 'imgFileNameCrop':'newFileName'},		//hardcoded must match: server return data keys
+	//'htmlDisplay':"<div class='ig-form-pic-upload'><div class='ig-form-pic-upload-button'>Select Photo</div></div>",
+	'cropOptions': {'cropMaxHeight':500, 'cropMaxWidth':500},
+	//'values':{'dirPath':'/uploads'},
+};
+
+//OPTIONAL
+$scope.$on(evtImageUpload, function(evt, args) {
+	//do extra post upload handling here..
+	//$scope.formVals.image =args[1].imgFileName;
+});
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compile', '$timeout', 'uiImageuploadData', function (uiConfig, $compile, $timeout, uiImageuploadData) {
+angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$timeout', 'uiImageuploadData', function (uiConfig, $timeout, uiImageuploadData) {
   return {
 		restrict: 'A',
 		//transclude: true,
 		scope: {
-			opts:'='
+			opts:'=',
+			ngModel:'='
 		},
 
 		compile: function(element, attrs) {
 			var xx;
-			var defaults ={'type':'dragNDrop', 'classes':{'dragText':'ui-imageupload-drag-text', 'orText':'ui-imageupload-or-text', 'uploadText':'ui-imageupload-upload-text', 'browseInput':'ui-imageupload-browse-input', 'browseButton':'ui-imageupload-browse-button', 'uploadButton':'ui-imageupload-upload-button'}, 'htmlUploading':'', 'showProgress':true};
+			var defaults ={'type':'dragNDrop', 'useUploadButton':'0', 'classes':{'dragText':'ui-imageupload-drag-text', 'orText':'ui-imageupload-or-text', 'uploadText':'ui-imageupload-upload-text', 'browseInput':'ui-imageupload-browse-input', 'browseButton':'ui-imageupload-browse-button', 'uploadButton':'ui-imageupload-upload-button'}, 'htmlUploading':'', 'showProgress':true};
 			if(attrs.htmlUploading !==undefined) {
 				defaults.showProgress =false;
 			}
@@ -102,13 +123,11 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				}
 			}
 		
-			/*
 			//convert to int
-			var attrsToInt =['pageSize'];
+			var attrsToInt =['useUploadButton'];
 			for(var ii=0; ii<attrsToInt.length; ii++) {
 				attrs[attrsToInt[ii]] =parseInt(attrs[attrsToInt[ii]], 10);
 			}
-			*/
 			
 			if(attrs.id ===undefined) {
 				attrs.id ="uiImageupload"+Math.random().toString(36).substring(7);
@@ -120,6 +139,10 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					'fileFake':id1+"FileFake",
 					'file':id1+"File",
 					'byUrl':id1+"ByUrl"
+				},
+				'progress':{
+					'barInner':id1+"ProgressBarInner",
+					'bar':id1+"ProgressBar"
 				}
 			};
 			attrs.ids =ids;		//save for later
@@ -187,7 +210,8 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				html+="</div>";
 				html+="</div>";		//end: ui-imageupload-aspect-ratio-element
 			html+="</div>";		//end: picture container
-			html+="<input ng-model='file' type='file' name='"+ids.input.file+"' id='"+ids.input.file+"' class='ui-imageupload-input' ng-change='fileSelected({})' />";
+			//html+="<input ng-model='file' type='file' name='"+ids.input.file+"' id='"+ids.input.file+"' class='ui-imageupload-input' ng-change='fileSelected({})' />";		//ng-change apparently doesn't work..  have to use onchange instead.. https://groups.google.com/forum/?fromgroups=#!topic/angular/er8Yci9hAto
+			html+="<input ng-model='file' type='file' name='"+ids.input.file+"' id='"+ids.input.file+"' class='ui-imageupload-input' onchange='angular.element(this).scope().fileSelected({})' />";
 			html+="<div class='ui-imageupload-picture-container-below' ng-show='{{show.pictureContainerBelow}}'>";
 				html+="<div class='ui-imageupload-picture-crop-div'><span class='ui-imageupload-picture-crop-button'>Crop Thumbnail</span></div>";
 				html+="<div class='ui-imageupload-picture-container-text'>Click or drag onto the picture to change images</div>";
@@ -209,18 +233,19 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			html+="</form>";
 			html+="<div class='ui-imageupload-upload-upload-button-container' ng-show='"+ngShow.uploadButton+"'><span class='"+attrs.classes.uploadButton+"' ng-click='uploadFile({})'>Upload</span></div>";
 			html+="<div class='ui-imageupload-notify' ng-show='{{show.notify}}'>"+attrs.htmlUploading+"</div>";
-			html+="<div class='ui-imageupload-progress-bar'><div class='ui-imageupload-progress-bar-inner'>&nbsp;</div></div>";
-			html+="<div >{{progressNumber}}</div>";
+			html+="<div id='"+attrs.ids.progress.bar+"' class='ui-imageupload-progress-bar'><div id='"+attrs.ids.progress.barInner+"' class='ui-imageupload-progress-bar-inner'>&nbsp;</div></div>";
+			html+="<div>{{progressNumber}}</div>";
 			html+="<div>{{fileInfo.name}}</div>";
 			html+="<div>{{fileInfo.size}}</div>";
 			html+="<div>{{fileInfo.type}}</div>";
+
 			html+="</div>";		//end: form container
 	
 			element.replaceWith(html);
 		},
 		
 		controller: function($scope, $element, $attrs) {
-			var defaults ={'cropOptions':uiImageuploadData.cropOptionsDefault, 'serverParamNames':{'file':'file', 'byUrl':'pp[fileUrl]'}, 'values':{}};
+			var defaults ={'cropOptions':uiImageuploadData.cropOptionsDefault, 'serverParamNames':{'file':'file', 'byUrl':'fileData[fileUrl]'}, 'values':{}};
 			if($scope.opts ===undefined) {
 				$scope.opts ={};
 			}
@@ -236,6 +261,8 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			}
 			*/
 			
+			$scope.file ='';
+			$scope.fileByUrl ='';
 			$scope.imgSrc =$scope.opts.values.dirPath+$scope.opts.values.src;
 			$scope.show ={
 				'notify':false,
@@ -302,16 +329,19 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				if($attrs.type =='byUrl')
 				{
 					file =document.getElementById($attrs.ids.input.byUrl).value;
+					//file =$scope.fileByUrl;		//not working?
 					retArray =checkFileType(file, {'fileTypes':$scope.opts.fileTypes});
 					if(!retArray.valid)		//invalid file type extension
 					{
 						document.getElementById($attrs.ids.input.byUrl).value ='';
+						//$scope.fileByUrl ='';		//not working?
 						alert(retArray.errorMsg);
 					}
 				}
 				else		//drag n drop (regular file input)
 				{
 					file = document.getElementById($attrs.ids.input.file).files[0];
+					//file = $scope.file;		//not working?
 					if (file)
 					{
 						var fileSize = 0;
@@ -333,11 +363,13 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 						if(!retArray.valid)		//invalid file type extension
 						{
 							document.getElementById($attrs.ids.input.file).value ='';
+							//$scope.file ='';		//not working?
 							alert(retArray.errorMsg);
 						}
 						else		//update fake file input (match with actual file input)
 						{
 							document.getElementById($attrs.ids.input.fileFake).value =document.getElementById($attrs.ids.input.file).value;
+							//$scope.fileFake =$scope.file;		//not working?
 						}
 					}
 				}
@@ -363,38 +395,41 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				{
 					//LLoading.show({});
 					fileVal =document.getElementById($attrs.ids.input.byUrl).value;
+					//fileVal =$scope.fileByUrl;		//not working?
 				}
 				else {
 					fileVal =document.getElementById($attrs.ids.input.file).value;
+					//fileVal =$scope.file;		//not working?
 				}
 				//alert(fileVal);
 				if(fileVal.length >0)
 				{
-					/*
-					//@todo
-					$("#"+params.ids.progressBarInner).css({'width':'0%'});
-					if(params.showProgress) {
-						$("#"+params.ids.progressBar).removeClass('complete');
-						$("#"+params.ids.progressBar).addClass('loading');
+					angular.element(document.getElementById($attrs.ids.progress.barInner)).css({'width':'0%'});
+					if($attrs.showProgress) {
+						var eleProgressBar =angular.element(document.getElementById($attrs.ids.progress.bar));
+						eleProgressBar.removeClass('complete');
+						eleProgressBar.addClass('loading');
 					}
 					else {
-						LLoading.show({});
+						//LLoading.show({});		//todo
 					}
-					*/
 					
 					var fd = new FormData();
 					/*
 					fd.append(params.inputIds.file, document.getElementById(params.inputIds.file).files[0]);
 					fd.append(params.inputIds.uploadDirectory, params.uploadDirectory);
 					*/
-					if($attrs.type =='byUrl')
+					if($attrs.type =='byUrl') {
 						fd.append($scope.opts.serverParamNames.byUrl, fileVal);
-					else
+					}
+					else {
 						fd.append($scope.opts.serverParamNames.file, document.getElementById($attrs.ids.input.file).files[0]);
-					fd.append('pp[uploadDir]', $scope.opts.uploadDirectory);
+						//fd.append($scope.opts.serverParamNames.file, $scope.file);		//not working?
+					}
+					fd.append('fileData[uploadDir]', $scope.opts.uploadDirectory);
 					if($scope.opts.cropOptions !==undefined) {
 						for(var xx in $scope.opts.cropOptions) {
-							fd.append('pp['+xx+']', $scope.opts.cropOptions[xx]);
+							fd.append('cropOptions['+xx+']', $scope.opts.cropOptions[xx]);
 						}
 					}
 					var sendInfo =fd;
@@ -428,7 +463,7 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 				if (evt.lengthComputable) {
 					var percentComplete = Math.round(evt.loaded * 100 / evt.total);
 					$scope.progressNumber =percentComplete.toString() + '%';
-					//document.getElementById(objCurState.ids.progressBarInner).style.width = percentComplete.toString() +'%';		//@todo
+					document.getElementById($attrs.ids.progress.barInner).style.width = percentComplete.toString() +'%';
 				}
 				else {
 					$scope.progressNumber = 'unable to compute';
@@ -444,13 +479,13 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 			function uploadComplete(evt, params) {
 				/* This event is raised when the server send back a response */
 				//alert(evt.target.responseText);
-				/*
-				//@todo
-				document.getElementById(objCurState.ids.progressBarInner).style.width = '100%';
-				//$("#"+params.ids.progressBar).removeClass('loading');
-				$("#"+params.ids.progressBar).addClass('complete');
-				document.getElementById(objCurState.ids.progressNumber).innerHTML = '';
-				*/
+				
+				document.getElementById($attrs.ids.progress.barInner).style.width = '100%';
+				
+				var ele1 =angular.element(document.getElementById($attrs.ids.progress.bar));
+				ele1.addClass('complete');
+				
+				$scope.progressNumber ='';
 
 				var data =$.parseJSON(evt.target.responseText);
 				//if(params.closeOnComplete)
@@ -536,14 +571,22 @@ angular.module('ui.directives').directive('uiImageupload', ['ui.config', '$compi
 					*/
 				}
 				
+				$scope.ngModel =data.imgFileName;		//set ngModel
+				
 				if($scope.opts.callbackInfo && ($scope.opts.callbackInfo ===undefined || !params.noCallback))
 				{
 					var args =$scope.opts.callbackInfo.args;
 					args =args.concat(data);
-					$scope.$broadcast($scope.opts.callbackInfo.evtName, args);
+					//$scope.$broadcast($scope.opts.callbackInfo.evtName, args);
+					$scope.$emit($scope.opts.callbackInfo.evtName, args);
 				}
 				//LLoading.close({});
 				$scope.show.notify =false;
+				
+				//ensure back in angular world so events fire now
+				if(!$scope.$$phase) {
+					$scope.$apply();
+				}
 			}
 			
 			/**

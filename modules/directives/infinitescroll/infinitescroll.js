@@ -41,7 +41,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 attrs
 	REQUIRED
 	OPTIONAL
-	scrollLoad =1 to do paging via scrolling as opposed to with "load more" button to click to load more
+	scrollLoad =1 to do paging via scrolling as opposed to with "load more" button to click to load more. NOTE: if set, this you MUST either set pageScroll to 1 OR pass in a scrollId in opts.scrollId scope variable
 		DEFAULT: 0
 	pageScroll =1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
 		DEFAULT: 0
@@ -63,8 +63,9 @@ attrs
 
 
 EXAMPLE usage:
+@example 1 - defaults
 partial / html:
-	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore'>
+	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore' opts='scrollOpts'>
 		<!-- custom display code to ng-repeat and display the results (items) goes below -->
 		<div class='friends-user' ng-repeat='user in users'>
 			{{user.name}}
@@ -73,28 +74,15 @@ partial / html:
 	</div>
 
 controller / js:
-	//$scope.opts.watchItemKeys =['main'];
-	$scope.users =[
-		{'_id':'d1', 'name':'john smith'},
-		{'_id':'d2', 'name':'joe bob'},
-		{'_id':'d3', 'name':'joe james'},
-		{'_id':'d4', 'name':'ron artest'},
-		{'_id':'d5', 'name':'kobe bryant'},
-		{'_id':'d6', 'name':'steve balls'},
-	];
+	$scope.users =[];
+	$scope.usersList =[];
+	$scope.scrollOpts ={};
 	
 	//handle load more (callbacks)
-	var itemsMore =
-	[
-		{'_id':'l1', 'name':'sean battier'},
-		{'_id':'l2', 'name':'lebron james'},
-		{'_id':'l3', 'name':'dwayne wade'},
-		{'_id':'l4', 'name':'rajon rondo'},
-		{'_id':'l5', 'name':'kevin garnett'},
-		{'_id':'l6', 'name':'ray allen'},
-		{'_id':'l7', 'name':'dwight howard'},
-		{'_id':'l8', 'name':'pau gasol'},
-	];
+	var itemsMore =[];
+	for(var ii=0; ii<100; ii++) {
+		itemsMore[ii] ={'_id':(ii+1), 'name':(ii+1)+'. Item #'+(ii+1)};
+	}
 	
 	//@param params
 	//	cursor =int of where to load from
@@ -104,9 +92,42 @@ controller / js:
 		callback(results, {});
 	};
 
+	
+@example 2 - page scrolling with negative loading (i.e. starting toward the end of a list then scrolling up to see previous entries)
+partial / html:
+	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore' opts='scrollOpts' page-size='40' negative-load='1' scroll-load='1' page-scroll='1'>
+		<!-- custom display code to ng-repeat and display the results (items) goes below -->
+		<div class='friends-user' ng-repeat='user in users'>
+			{{user.name}}
+		</div>
+		<!-- end: custom display code -->
+	</div>
+
+controller / js:
+	$scope.scrollOpts ={};
+	$scope.usersList =[];
+	$scope.users =[];
+	
+	//handle load more (callbacks)
+	var totItems =1000;
+	var itemsMore =[];
+	for(var ii=0; ii<totItems; ii++) {
+		itemsMore[ii] ={'_id':(ii+1), 'name':(ii+1)+'. Item #'+(ii+1)};
+	}
+	//var offset =Math.floor(totItems/2);
+	var offset =totItems-100;
+	
+	//@param params
+	//	cursor =int of where to load from
+	//	loadMorePageSize =int of how many to return
+	$scope.loadMore =function(params, callback) {
+		var results =itemsMore.slice(offset+params.cursor, (offset+params.cursor+params.loadMorePageSize));
+		callback(results, {});
+	};
+
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$compile', '$timeout', 'uiInfinitescrollData', function (uiConfig, $compile, $timeout, uiInfinitescrollData) {
+angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$timeout', 'uiInfinitescrollData', function (uiConfig, $timeout, uiInfinitescrollData) {
   return {
 		restrict: 'A',
 		transclude: true,
@@ -164,7 +185,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='(noMoreLoadMoreItems.next) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div ng-hide='(noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
 					"<div ng-show='noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+
@@ -180,7 +201,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				'cursors':{
 					'items':{
 						'start':0,
-						'end':0
+						'end':$scope.items.length
 					},
 					'itemsView':{
 						'current':0
@@ -338,7 +359,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 				$scope.page =Math.floor($scope.opts.cursors.itemsView.current / $attrs.pageSize);
 				setItemsViewCursor({});
 				
-				//formItems({});
+				setItems({});
 				if($scope.items.length <$attrs.pageSize*2) {		//load more externally if don't have enough
 					$scope.loadMoreDir({});
 				}
@@ -591,7 +612,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$co
 			$scope.loadMoreDir =function(params) {
 				var getMoreItemsTrig =false;
 				if(params.prev) {
-					//if have more items left, increment page & show them
+					//if have more items left, decrement page & show them
 					if(($scope.opts.cursors.items.start ===0 && $scope.opts.cursors.itemsView.start !==0) || $scope.opts.cursors.items.start < ($scope.opts.cursors.itemsView.start -$attrs.pageSize)) {
 						changePage({'prev':true});
 					}

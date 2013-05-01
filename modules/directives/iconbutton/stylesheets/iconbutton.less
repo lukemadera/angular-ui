@@ -1,0 +1,83 @@
+
+/* ui-iconbutton */
+
+@iconWidth: 40px;
+
+.ui-iconbutton
+{
+	/*@include flex-box-stretch;*/
+	/*width:100%;*/
+	border-radius:4px;
+	cursor:pointer;
+}
+.ui-iconbutton >div
+{
+	/*display:inline-block;*/
+	/*padding:0 10px;*/
+}
+.ui-iconbutton-text
+{
+	/*@include box-flex(1);*/
+	margin-left:@iconWidth;
+}
+.ui-iconbutton-icon
+{
+	float:left;
+	width:@iconWidth;
+	font-size:2em;
+	line-height:1.3em;
+}
+.ui-iconbutton-text
+{
+	font-size:1.1em;
+	text-align:center;
+}
+.ui-iconbutton .ui-iconbutton-text
+{
+	padding-top:.7em;
+}
+
+/* common social buttons themes */
+.facebook.ui-iconbutton {
+	color:white;
+	.gradient(~"linear-gradient(180deg, rgb(112,133,185), rgb(79,96,130))");
+}
+.facebook.ui-iconbutton:hover {
+	.gradient(~"linear-gradient(0deg, rgb(112,133,185), rgb(79,96,130))");
+}
+.facebook .ui-iconbutton-icon  {
+	border-right:solid 1px rgb(34,62,108);
+}
+.facebook .ui-iconbutton-text {
+	border-left:solid 1px rgb(144,171,218);
+}
+
+.google.ui-iconbutton {
+	color:white;
+	background-color:#cc3732;
+}
+.google.ui-iconbutton:hover {
+	background-color:#e74b37;
+}
+/*
+.google .ui-iconbutton-icon  {
+	border-right:solid 1px rgb(34,62,108);
+}
+.google .ui-iconbutton-text {
+	border-left:solid 1px rgb(144,171,218);
+}
+*/
+
+.linked-in.ui-iconbutton {
+	color:white;
+	.gradient(~"linear-gradient(180deg, rgb(132,196,221), rgb(4,118,145))");
+}
+.linked-in.ui-iconbutton:hover {
+	.gradient(~"linear-gradient(0deg, rgb(132,196,221), rgb(4,118,145))");
+}
+.linked-in .ui-iconbutton-icon  {
+	border-right:solid 1px rgb(6,96,122);
+}
+.linked-in .ui-iconbutton-text {
+	border-left:solid 1px rgb(167,216,249);
+}

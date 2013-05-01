@@ -1,10 +1,6 @@
 /**
-@todo
-- style it (just the search box, load more button, etc.?)
-- allow optional scope attrs?? i.e. searchText, watchItemKeys, loadMore aren't really necesssary and the logic handles this but the directive throws an error if they're not defined and unit-testing fails.. so just need to figure out syntax / compiler way to allow this..
-
-
 Uses one associative array (raw data) to build a concatenated scalar (final/display) array of items to search / filter.
+	Adds upon ng-filter directive with the following features:
 	- handles paging / loading more when scroll to bottom
 	- can be used with a backend lookup call to load more results (if "loadMore" attr/scope function is passed in)
 		- loadMore function is called when have less than full results among current filtered items stored in javascript, which happens 1 of 2 ways:
@@ -24,11 +20,10 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 //8. addLoadMoreItems
 //9. checkForScrollBar
 
-scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
-	REQUIRED
-	itemsRaw =array {} of arrays {}, one per each "type". Each type must contain an "items" field that's a scalar array of the items for this type
+@param {Object} scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html). REMEMBER: use snake-case when setting these on the partial!
+	@param {Array} itemsRaw array of arrays {}, one per each "type". Each type must contain an "items" field that's a scalar array of the items for this type
 		NOTE: itemsRaw MUST have this structure and at least the 'main' key
-		EXAMPLE:
+		@example
 		{
 			'main':{
 				'items':[
@@ -45,38 +40,29 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 				],
 			}
 		}
-	itemsFiltered =array [] placeholder for where the final, concatenated items will be stored; this is the array that will actually be displayed and searched through and is a combination of the itemsRaw[type].items arrays
-	filterFields =array [] of all fields in each items array to search for match
-		EXAMPLE: ['first', 'last', 'header.title']
+	@param {Array} itemsFiltered array placeholder for where the final, concatenated items will be stored; this is the array that will actually be displayed and searched through and is a combination of the itemsRaw[type].items arrays
+	@param {Array} filterFields all fields in each items array to search for match
+		@example ['first', 'last', 'header.title']
 			NOTE: 'header.title' will search in header['title'] if filterFieldsDotNotation is set to true. Otherwise it will look in a NON-NESTED key that has a "." as part of it
 				i.e. array['header.title'] VS array['header']['title']
-	searchText {String} text to search for (will be used as ng-model for input)
-	watchItemKeys =array [] of keys to $watch; if these are updated in $scope (i.e. outside the directive), it will re-form itemsFiltered in the directive
-		DEFAULT: ['main']
-	loadMore =function to call to load more results (this should update $scope.itemsRaw, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
+	@param {Object} [opts ={}] Additional scope variables that can be used
+		@param {String} [searchText =''] text to search for (will be used as ng-model for input)
+		@param {Array} [watchItemKeys ='main'] keys to $watch; if these are updated in $scope (i.e. outside the directive), it will re-form itemsFiltered in the directive
+	@param {Function} loadMore function to call to load more results (this should update $scope.itemsRaw, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
 
-attrs
-	REQUIRED
-	OPTIONAL
-	filterFieldsDotNotation =boolean true to change all periods to sub array's (i.e. so 'header.title' as a filterField would search in header['title'] for a match)
-		DEFAULT: true
-	scrollLoad =1 to do paging via scrolling
-		DEFAULT: 0
-	pageScroll =1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
-		DEFAULT: 0
-	pageSize =int of how many results to show at a time (will load more in increments of pageSize as scroll down / click "more")
-		DEFAULT: 10
-	loadMorePageSize =int of how many results to load (& thus store in queue) at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
-		DEFAULT: 20
-	loadMoreItemsKey =string that matches a key in the itemsRaw array - this is where items from backend will be loaded into
-		DEFAULT: extra
-	placeholder =string of input search placeholder (default "search")
-	//id =string of instance id for this copy of the directive
+@param {Object} attrs REMEMBER: use snake-case when setting these on the partial! i.e. scroll-load='1' NOT scrollLoad='1'
+	@param {Boolean} [filterFieldsDotNotation =true] true to change all periods to sub array's (i.e. so 'header.title' as a filterField would search in header['title'] for a match)
+	@param {Number} [scrollLoad =0] 1 to do paging via scrolling
+	@param {Number} [pageScroll =0] 1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
+	@param {Number} [pageSize =10] how many results to show at a time (will load more in increments of pageSize as scroll down / click "more")
+	@param {Number} [loadMorePageSize =20] how many results to load (& thus store in queue) at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
+	@param {String} [loadMoreItemsKey ='extra'] matches a key in the itemsRaw array - this is where items from backend will be loaded into
+	@param {String} [placeholder ='search'] input search placeholder
 
 
 EXAMPLE usage:
 partial / html:
-	<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='loadMore' search-text='searchText' watch-item-keys='watchItemKeys'>
+	<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='loadMore' opts='opts'>
 		<!-- custom display code to ng-repeat and display the results (items-filtered) goes below -->
 		<div class='friends-user' ng-repeat='user in users'>
 			{{user.name}}
@@ -85,10 +71,9 @@ partial / html:
 	</div>
 
 controller / js:
-	$scope.searchText ='';
-	$scope.watchItemKeys =['main'];
-	$scope.users =[];
+	$scope.opts ={};
 	$scope.filterFields =['name'];
+	$scope.users =[];
 	$scope.usersRaw ={
 		'main':{
 			'items':[
@@ -129,7 +114,7 @@ controller / js:
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '$compile', '$timeout', function (uiConfig, $filter, $compile, $timeout) {
+angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '$timeout', function (uiConfig, $filter, $timeout) {
 
 	/**
 	//returns the value of an array when given the array base and the keys to read
@@ -202,9 +187,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			itemsRaw: '=',
 			itemsFiltered: '=',
 			filterFields:'=',
-			watchItemKeys:'=',		//note: this is not required & will throw an error if not set but it still works? @todo fix this so it's not required & doesn't throw error?
-			loadMore:'&',
-			searchText:'='
+			loadMore:'&'
 		},
 
 		compile: function(element, attrs) {
@@ -236,16 +219,16 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			var html="<div class='ui-lookup'>"+
 				"<div class='ui-lookup-top'>"+
 					"<div class='ui-lookup-input-div'>"+
-						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='searchText' ng-click='clickInput({})' />"+
+						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='opts.searchText' ng-click='clickInput({})' />"+
 					"</div>"+
 					//"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
 					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
-					"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
+					"<div class='text-warning' ng-show='itemsFiltered.length <1'>No matches</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-lookup-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='(noMoreLoadMoreItems && queuedItems.length <1) || (scrollLoad && hasScrollbar)' class='ui-lookup-more' ng-click='loadMoreDir({})'>Load More</div>"+
-					"<div ng-show='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-no-more'>No More Results!</div>"+
+					"<div ng-hide='(noMoreLoadMoreItems && queuedItems.length <1) || (scrollLoad && hasScrollbar)' class='ui-lookup-more btn-link' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div ng-show='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-no-more muted'>No More Results!</div>"+
 				"</div>"+
 			"</div>";
 				
@@ -254,7 +237,6 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 		
 		controller: function($scope, $element, $attrs) {
 			var defaults ={
-				'watchItemKeys':['main']
 			};
 			for(var xx in defaults) {
 				if($scope[xx] ===undefined) {
@@ -262,8 +244,11 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				}
 			}
 			
-			if($scope.searchText ===undefined) {
-				$scope.searchText ='';
+			if($scope.opts ===undefined) {
+				$scope.opts ={
+					searchText: '',
+					watchItemKeys: ['main']
+				};
 			}
 			$scope.trigs ={'loading':false};
 			$scope.items =[];
@@ -419,9 +404,9 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			
 			//2.
 			$scope.filterItems =function(params) {
-				//$scope.itemsFiltered =$filter('filter')($scope.items, {name:$scope.searchText});
+				//$scope.itemsFiltered =$filter('filter')($scope.items, {name:$scope.opts.searchText});
 				var curItem =false;
-				var searchText1 =$scope.searchText.toLowerCase();
+				var searchText1 =$scope.opts.searchText.toLowerCase();
 				if(searchText1.length <1) {
 					$scope.itemsFiltered =$scope.items;
 				}
@@ -495,8 +480,8 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			});
 			*/
 			//for(var xx in $scope.itemsRaw) {
-			for(var ii =0; ii<$scope.watchItemKeys.length; ii++) {
-				xx =$scope.watchItemKeys[ii];
+			for(var ii =0; ii<$scope.opts.watchItemKeys.length; ii++) {
+				xx =$scope.opts.watchItemKeys[ii];
 				//$scope.$watch('itemsRaw', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw['+xx+'].items[0]', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw.extra.items[0]', function(newVal, oldVal) {
@@ -587,7 +572,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 									ppTemp.loadPageSize =loadPageSize;
 								}
 							}
-							$scope.loadMore()({'cursor':cursors[$attrs.loadMoreItemsKey], 'loadMorePageSize':loadPageSize, 'searchText':$scope.searchText}, function(results, ppCustom) {
+							$scope.loadMore()({'cursor':cursors[$attrs.loadMoreItemsKey], 'loadMorePageSize':loadPageSize, 'searchText':$scope.opts.searchText}, function(results, ppCustom) {
 								addLoadMoreItems(results, ppCustom, ppTemp);
 							});
 						}
