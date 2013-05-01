@@ -14,17 +14,18 @@ Example Calls:
 	
 	$scope.opts = 
 	{
-		'num_handles': '1',
-		'slider_min': '0',
-		'slider_max': '100',
-		'precision': '0',
+		'num_handles': 1,
+		'slider_min': 0,
+		'slider_max': 100,
+		'precision': 0,
 		'scale_string': '[1, 1]',
 		'zero_method': 'newton',
-		'increment': '0',
+		'increment': 0,
 		'user_values': '',
 		'evt_mouseup': '',
 		'slider_moveable': true,
 		'use_array': true,
+		'rotate': 0,
 		'bar_container_class': 'ui-slider-bar',
 		'left_bg_class': 'ui-slider-bar-active',
 		'interior_bg_class': 'ui-slider-bar-active',
@@ -261,6 +262,7 @@ the slider's width and horizontal offsets, so that the mouse's coordinates can b
 If at any time after the initial definition of these offsets, the slider's position or width on the page changes, then the offsets need to be reset.
 So, if this value is set to true, the slider will recalculate the offsets every time the user interacts with the slider.
 Set this value to false (for a small efficiency boost) only if you are sure that the slider (and its containing div) will not move around.
+Note: Re-initializing the slider will cause the offsets to be recalculated regardless. You may be able to use this to your advantage.
 	Ex: slider_moveable: 'false'.	Default: 'true'
 
 use_array: Boolean. False iff the slider should treat single-handle sliders as a special case, returning the value rather than a single-element array of values.
@@ -268,6 +270,11 @@ use_array: Boolean. False iff the slider should treat single-handle sliders as a
 	May be input as boolean or string.
 	Ex: use_array: 'false'. Default: 'true'
 
+rotate: Number between -180 and 180. Defines how the slider should be rotated. May be input as number or string.
+	0 degrees is the default, unrotated. Angles increase counterclockwise: 90 degrees would make the sldier vertical, with what was the left edge at the top.
+	The entire slider gets rotated, including any text.
+	Ex: rotate: 45. Default: 0
+	
 bar_container_class: Class for the slider bar container. The (inner) width of this element will determine the width of the slider.
 	Note: If you set this attribute, the container will have 0 height unless you give it a height.
 	Ex: bar_container_class : 'my-slider-bar'. Default: 'ui-slider-bar'
@@ -393,7 +400,9 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 											//represented as a polynomial abstract data type.
 			var cur_handle;				//Index of handle currently being dragged.
 			var dragging;				//Boolean. True iff we're dragging a handle.
-			var slider_offset;			//the x-offset of the slider bar. Needed when translating the mouse's position to a slider position.
+			var slider_offset;			//the x and y offsets of the slider bar. Needed when translating the mouse's position to a slider position.
+				//slider_offset.x
+				//slider_offset.y
 			var slider_width;			//the width of the slider bar. Needed when translating the mouse's position to a slider position.
 			var slider_init;			//Boolean. True iff the slider_offset and slider_width values have been set.
 			var increments;				//Array of valid values for an increment slider
@@ -401,6 +410,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					//left					//Number in [0, 100]. The left value for this increment (as % of slider width).
 					//value					//Number in [scope.slider_min, scope.slider_max]. The value of this increment on the slider.
 			var user_values_flag;		//Boolean. True iff the user has specified values to put on the slider
+			var rotate_radians;			//Number. Slider's angle of rotation, converted to radians.
 			
 			/*
 			scope variables.
@@ -414,7 +424,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					display_value					The value that gets displayed. Only different from 'value' for sliders with specific user-defined values.
 					return_value					The value that gets returned. Only different from 'display_value' if the user defines it as such in user_values
 					innerhtml						Html to place inside the handle.
-					html_string						Raw html string (uninterpolated) to put in handle. Equal to innerhtml iff value_in_handle == false
+					html_string						Raw html string (uninterpolated) to put in handle. Equal to innerhtml iff value_in_handle === false
 					value_in_handle					Boolean. True iff the innerhtml has a '$$value' tag to interpolate.
 					
 			scope.interiors							Array containing info for the interior divs, between the handles. This array depends entirely on the handles.
@@ -479,30 +489,31 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			
 			defaults = 
 			{
-				'num_handles': '1',
-				'slider_min': '0',
-				'slider_max': '100',
+				'num_handles': 1,
+				'slider_min': 0,
+				'slider_max': 100,
+				'precision': 0,
+				'scale_string': '[1, 1]',
+				'zero_method': 'newton',
+				'increment': 0,
+				'user_values': '',
+				'evt_mouseup': '',
+				'slider_moveable': true,
+				'use_array': true,
+				'rotate': 0,
+				'bar_container_class': 'ui-slider-bar',
 				'left_bg_class': 'ui-slider-bar-active',
 				'interior_bg_class': 'ui-slider-bar-active',
 				'right_bg_class': 'ui-slider-bar-inactive',
-				'bar_container_class': 'ui-slider-bar',
 				'handle_class': 'ui-slider-bar-handle',
+				'handle_html': '<div class = "ui-slider-bar-handle-inner"></div>',
 				'units_pre': '',
 				'units_post': '',
 				'use_ticks': false,
-				'ticks_class': 'ui-slider-ticks',
 				'ticks_values': 'placeholder',		//Placeholder special value
+				'ticks_class': 'ui-slider-ticks',
 				'ticks_values_container_class': 'ui-slider-ticks-values-container',
-				'ticks_value_class': 'ui-slider-ticks-value',
-				'increment': '0',
-				'precision': '0',
-				'evt_mouseup': '',
-				'slider_moveable': true,
-				'user_values': '',
-				'handle_html': '<div class = "ui-slider-bar-handle-inner"></div>',
-				'scale_string': '[1, 1]',
-				'zero_method': 'newton',
-				'use_array': true
+				'ticks_value_class': 'ui-slider-ticks-value'
 			};
 			
 			//Init the event name variables here so we don't get undefined reference errors. Will be properly set later.
@@ -598,7 +609,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				{
 					setTicks();
 				}
-				setJquery();
+				setJqueryTouch();
 				
 				building_slider = false;
 				//If an attempt was made to re-init the slider while it was building, re-init now.
@@ -623,6 +634,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				scope.slider_max = parseFloat(scope.slider_max);
 				scope.increment = parseFloat(scope.increment);
 				scope.precision = parseInt(scope.precision, 10);
+				scope.rotate = reRangeAngle(parseFloat(scope.rotate));
 				
 				//Parse Booleans
 				scope.slider_moveable = parseBoolean(scope.slider_moveable, defaults.slider_moveable);
@@ -662,13 +674,23 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				scope.handles = [];
 				scope.interiors = [];
 				scope.ticks = [];
-				slider_offset = 0;			//Init to 0; will set later
-				slider_width = 100;			//Init to 100; will set later
-				slider_init = false;
 				increments = [];
+				slider_offset = {'x': 0, 'y': 0};			//Init to 0; will set later
+				slider_width = 100;							//Init to 100; will set later
+				slider_init = false;
+				rotate_radians = scope.rotate * (2 * Math.PI / 360);
+				
+				//Compute slope of slider and slope of perpendicular. Conceptually it makes more sense to compute this
+				//at the same time that we set the slider offsets, but that code may be run many times, and these won't change.
+				//Thus, it's more efficient to compute these now.
+				if(scope.rotate !== 0 && scope.rotate !== 90 && scope.rotate !== -90 && scope.rotate !== 180)
+				{
+					//Ignore slopes for horizontal and vertical sliders, because they produce division-by-zero error.
+					slider_offset.m1 = Math.tan(rotate_radians);
+					slider_offset.m2 = (-1 / slider_offset.m1);
+				}
 				
 				//Parse scale, form scale function
-				
 				if(scope.increment === 0)								//If not increment slider, re-form scale polynomial
 				{
 					scale_function_poly = uiPolynomial.stringToPoly(scope.scale_string);
@@ -699,10 +721,11 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				//Setup needed bar styles
 				scope.slider_bar_style = 'position:relative; width:100%;';
 				scope.left_bg_style = 'position:absolute; left:0%;';				//width varies depending on handle position; define separately.
-				scope.interior_bg_style = 'position:absolute;';							//left, width varies depending on handles. Define separately.
-				scope.right_bg_style = 'position:absolute; right:0%;';			//width varies depending on handle position; define separately.
+				scope.interior_bg_style = 'position:absolute;';						//left, width varies depending on handles; define separately.
+				scope.right_bg_style = 'position:absolute; right:0%;';				//width varies depending on handle position; define separately.
 				scope.handle_style = 'position:absolute;';
-				scope.bar_container_style = '';		//No styles needed here anymore
+				var ro = 'rotate(' + scope.rotate + 'deg); ';
+				scope.bar_container_style = '-moz-transform:' + ro + '-webkit-transform:' + ro + '-o-transform:' + ro + '-ms-transform:' + ro + 'transform:' + ro;
 				
 			};	//End setStyles
 			
@@ -911,12 +934,13 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					{
 						var index;
 						var jj;
+						//Find the tick value in the user_values array to get the index of the appropriate increment where this tick should be placed
 						for(jj = 0; jj < scope.user_values.length; jj++)
 						{
 							if(scope.user_values[jj].val.toString() == scope.ticks[ii].val.toString())
 							{
 								index = jj;
-								jj = scope.user_values.length;
+								jj = scope.user_values.length;	//Stop looping
 							}
 						}
 					
@@ -924,7 +948,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					}
 					else
 					{
-						new_left = calculate_left(scope.ticks[ii].val);
+						new_left = calculate_left(scope.ticks[ii].val);	//No user-defined values; calculate left normally.
 					}
 					
 					scope.ticks[ii].left = new_left;
@@ -933,7 +957,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			};	//End setTicks
 			
 			
-			var setJquery = function()
+			var setJqueryTouch = function()
 			{			
 				//initTouch: Function wrapper for timeout - waits until angular applies ids to elements, then sets up jquery touch events
 				var initTouch = function()
@@ -955,7 +979,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 							(function(index)			//wrap in anonymous function to get a local copy of the counter
 							{
 								var handle_ele = $('#' + scope.slider_id + 'Handle' + index);
-								handle_ele.unbind('touchstart');
+								handle_ele.unbind('touchstart');		//Remove any previous events before adding a new one
 								handle_ele.bind('touchstart', function()
 								{
 									scope.$apply(function()
@@ -967,7 +991,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 						}
 						
 						var slider_ele = $('#' + scope.slider_id);
-						slider_ele.unbind('touchmove');
+						slider_ele.unbind('touchmove');				//Remove any previous events before adding a new one
 						slider_ele.bind('touchmove', function(event)
 						{
 							event.preventDefault();					//? Maybe prevents default phone touchmove stuff, like scrolling?
@@ -981,7 +1005,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 				};
 				
 				initTouch();
-			};	//End setJquery
+			};	//End setJqueryTouch
 			
 			
 			//End Setup Functions
@@ -1110,14 +1134,53 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			};
 			
 			//*******************************************************************************************
+			//reRangeAngle: takes a number representing an angle in degrees. Returns an equivalent angle in (-180, 180]
+			//Ex: reRangeAngle(270) returns -90
+			var reRangeAngle = function(angle)
+			{
+				while(angle > 180)
+				{
+					angle -= 360;
+				}
+				while(angle <= -180)
+				{
+					angle += 360;
+				}
+				return angle;
+			};
+			
+			//*******************************************************************************************
 			//initSliderOffsets: handles jquery that gets slider's offset and width.
 			//Should be called at the start of every mouse interaction event with the slider
 			var initSliderOffsets = function()
 			{
 				if(scope.slider_moveable === true || slider_init === false)
 				{
-					slider_offset = $('#' + scope.slider_id + "SliderBar").offset().left;
-					slider_width =$('#' + scope.slider_id + "SliderBar").outerWidth();
+					var bar = $('#' + scope.slider_id + "SliderBar");
+					slider_width = bar.outerWidth();
+					slider_offset.x = bar.offset().left;
+					slider_offset.y = bar.offset().top;
+					
+					//When in the bottom two quadrants, the y offset needs to be mirrored (it gets reported as being in the top 2)
+					if(scope.rotate < 0)
+					{
+						slider_offset.y += slider_width * Math.abs(Math.sin(rotate_radians));
+					}
+					//When in the right two quadrants, the x offset needs to be mirrored (it gets reported as being in the left 2)
+					if(scope.rotate > 90 || scope.rotate < -90)
+					{
+						slider_offset.x += slider_width * Math.abs(Math.cos(rotate_radians));
+					}
+					
+					//Compute slider's y-intercept (the b in y = mx + b)
+					if(slider_offset.m1 !== undefined)
+					{
+						//Recall that slider_offset.m1 will be defined iff the slider is neither horizontal nor vertical.
+						//We don't need b1 in those cases, so don't waste time trying to compute it.
+						slider_offset.b1 = (-1 * slider_offset.m1 * slider_offset.x) + slider_offset.y;
+					}
+					
+					
 					slider_init = true;
 				}
 			};
@@ -1133,7 +1196,8 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					initSliderOffsets();	//First must make sure slider offsets set
 					
 					var x_coord = event.pageX;
-					var new_left = convertMouseToSliderPercent(x_coord);
+					var y_coord = event.pageY;
+					var new_left = convertMouseToSliderPercent(x_coord, y_coord);
 					
 					//Check and handle increments
 					if(scope.increment !== 0 && scope.increment !== undefined)
@@ -1158,7 +1222,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 					{
 						for(ii = 0; new_left > scope.handles[ii].left; ii++);
 						
-						//Now the ii-1 handle is left of our position, and the ii handle is to our right
+						//Now the ii-1 handle is left of our position, and the ii handle is to our right.
 						//Check which is nearer. Tie goes to the right-side handle.
 						if((scope.handles[ii].left - new_left) > (new_left - scope.handles[ii-1].left))
 						{
@@ -1209,17 +1273,20 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			var continueHandleDrag = function(event)
 			{
 				var x_coord;
+				var y_coord;
 				
 				if(event.touches && event.touches.length)		//If touch event
 				{
 					x_coord = event.touches[0].pageX;
+					y_coord = event.touches[0].pageY;
 				}
 				else			//If mouse drag event
 				{
 					x_coord = event.pageX;
+					y_coord = event.pageY;
 				}
 				
-				var new_left = convertMouseToSliderPercent(x_coord);
+				var new_left = convertMouseToSliderPercent(x_coord, y_coord);
 				
 				//Check and handle increments
 				if(scope.increment !== 0 && scope.increment !== undefined)
@@ -1233,9 +1300,55 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			
 			//*******************************************************************************************
 			//Takes a mouse x coordinate and converts it to a left% on the slider. May return a % that is off the slider.
-			var convertMouseToSliderPercent = function(x_coord)
+			var convertMouseToSliderPercent = function(x_coord, y_coord)
 			{
-				return ((x_coord - slider_offset) / slider_width) * 100;
+				//Check horizontal slider first as a special case for an efficiency boost in this common use case,
+				//and also because the general calculation fails in this case due to undefined slopes.
+				if(scope.rotate === 0)
+				{
+					return ((x_coord - slider_offset.x) / slider_width) * 100;
+				}
+				else if(scope.rotate === 180)	//Compute separately rather than using absolute value, because we want to preserve any negative signs.
+				{
+					return ((slider_offset.x - x_coord) / slider_width) * 100;
+				}
+				//Check vertical slider second as a special case, for the same reasons as above.
+				else if(scope.rotate === 90)
+				{
+					return ((y_coord - slider_offset.y) / slider_width) * 100;
+				}
+				else if(scope.rotate === -90)	//Compute separately rather than using absolute value, because we want to preserve any negative signs.
+				{
+					return ((slider_offset.y - y_coord) / slider_width) * 100;
+				}
+				//Else, perform the generalized calculation
+				else
+				{
+					//This is just 8th-grade algebra in a standard Euclidean plane. We're considering the slider as a line with 0 width,
+					//and we're finding the point on the slider nearest to the mouse's coordinates.
+					var x_new = (y_coord - (slider_offset.m2 * x_coord) - slider_offset.b1) / (slider_offset.m1 - slider_offset.m2);
+					var y_new = (slider_offset.m1 * x_new) + slider_offset.b1;
+					
+					//Check if we're off the slider's near edge, else a left of -x% would register as +x% (because distances are positive), though it should be 0.
+					//In the left two quadrants, the x value should be larger than the offset, else we're off the slider.
+					if(scope.rotate < 90 && scope.rotate > -90 && x_new <= slider_offset.x)
+					{
+						return 0;
+					}
+					//In the other two quadrants, the x value should be smaller than the offset, else we're off the slider.
+					else if(x_new >= slider_offset.x)
+					{
+						return 0;
+					}
+					else	//We're on the slider.
+					{
+						//Now use the distance formula to convert this new point to a left% on the slider.
+						var dist = Math.sqrt(Math.pow(slider_offset.x - x_new, 2) + Math.pow(slider_offset.y - y_new, 2));
+						var left = (dist / slider_width) * 100;
+						
+						return left;
+					}
+				}
 			};
 			
 			
@@ -1478,7 +1591,7 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			//Use document.ready, not scope.$on('viewContentLoaded'), because apparently viewContentLoaded doesn't always fire.
 			$(document).ready(function()
 			{
-				setJquery();
+				setJqueryTouch();
 			});
 			
 			
