@@ -2,10 +2,9 @@
 @todo2:
 - load more / calling function to load more opts & then update them (i.e. when scroll to bottom or click "more")
 	- use timeout for searching more & auto search more if result isn't found in default/javascript/local opts
-- $watch to update opts
 
 USAGE functions:
-//to update options after it's been written / initialized:
+//to update options after it's been written / initialized:		//NOTE: this should NOT be necessary anymore as $watch is being used on opts
 $scope.$broadcast('uiMultiselectUpdateOpts', {'id':'select1', 'opts':optsNew});
 
 
@@ -34,25 +33,28 @@ uiMultiselectData service
 //5. mouseInDiv
 
 
-attrs
-	REQUIRED
-	selectOpts =array []{} of options
-		val =value of this option
-		name =text/html to display for this option
-	ngModel
-	OPTIONAL
-	createNew =int 1 or 0; 1 to allow creating a new option from what the user typed IF it doesn't already exist
-	placeholder =string of text/prompt to show in input box
-	minLengthCreate (default 1) =int of how many characters are required to be a valid new option
-	onChangeEvt =string of event to broadcast on change (or remove) options
+@param {Object} scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html). REMEMBER: use snake-case when setting these on the partial!
+	@param {Array} selectOpts options; each item is an object of:
+		@param {String} val Value of this option
+		@param {String} name text/html to display for this option
+	@param {Mixed} ngModel
+	@param {Object} config
+		@param {Number} [createNew] int 1 or 0; 1 to allow creating a new option from what the user typed IF it doesn't already exist
+
+@param {Object} attrs REMEMBER: use snake-case when setting these on the partial! i.e. scroll-load='1' NOT scrollLoad='1'
+	@param {String} [id] Id for this element (required to use uiMultiselectUpdateOpts event to update options)
+	@param {String} [placeholder] text/prompt to show in input box
+	@param {Number} [minLengthCreate =1] how many characters are required to be a valid new option
+	@param {String} [onChangeEvt] event to broadcast on change (or remove) options
 
 
 EXAMPLE usage:
 partial / html:
-	<div ui-multiselect id='select1' select-opts='selectOpts' ng-model='selectVals'></div>
+	<div ui-multiselect id='select1' select-opts='selectOpts' ng-model='selectVals' config='config'></div>
 
 controller / js:
 	$scope.selectVals =[];
+	$scope.config ={};
 	$scope.selectOpts =[
 		{'val':1, 'name':'one'},
 		{'val':2, 'name':'two'},
@@ -79,7 +81,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 		scope: {
 			selectOpts:'=',
 			ngModel:'=',
-			createNew:'='
+			config:'='
 		},
 
 		compile: function(element, attrs) {
@@ -135,7 +137,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 					"<div id='"+uiMultiselectData.data[formId1].ids.dropdown+"' class='ui-multiselect-dropdown'>";
 						//html+="<div class='ui-multiselect-dropdown-opt' ng-repeat='opt in opts | filter:{name:modelInput, selected:\"0\"}' ng-click='selectOpt(opt, {})'>{{opt.name}}</div>";
 						html+="<div class='ui-multiselect-dropdown-opt' ng-repeat='opt in filteredOpts' ng-click='selectOpt(opt, {})'>{{opt.name}}</div>";
-						html+="<div class='ui-multiselect-dropdown-opt' ng-show='createNew && createNewAllowed && filteredOpts.length <1' ng-click='createNewOpt({})'>[Create New]</div>"+
+						html+="<div class='ui-multiselect-dropdown-opt' ng-show='config.createNew && createNewAllowed && filteredOpts.length <1' ng-click='createNewOpt({})'>[Create New]</div>"+
 						"<div class='ui-multiselect-dropdown-opt' ng-show='loadingOpt'>Loading..</div>";
 					//opts will be built and stuff by writeOpts function later
 					html+="</div>";
@@ -161,6 +163,9 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			}
 			else if(typeof($scope.ngModel) =='string') {		//convert to array
 				$scope.ngModel =[$scope.ngModel];
+			}
+			if($scope.options ===undefined) {
+				$scope.options ={};
 			}
 			$scope.modelInput ='';
 			$scope.loadingOpt =false;
@@ -218,7 +223,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 					if($scope.filteredOpts.length >0) {		//select first one
 						$scope.selectOpt($scope.filteredOpts[0], {});
 					}
-					else if($scope.createNew) {		//create new
+					else if($scope.config.createNew) {		//create new
 						$scope.createNewOpt({});
 					}
 				}
@@ -228,7 +233,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			$scope.filterOpts =function(params) {
 				$scope.filteredOpts =$filter('filter')($scope.opts, {name:$scope.modelInput, selected:"0"});
 				if($scope.filteredOpts.length <1) {
-					if($scope.createNew && createNewCheck({}) ) {
+					if($scope.config.createNew && createNewCheck({}) ) {
 						$scope.createNewAllowed =true;
 					}
 					else {
@@ -410,6 +415,15 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				//if(newVal !=oldVal) {
 				//if(1) {		//comparing equality on arrays doesn't work well..
 				if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+					selectOpts($scope.ngModel, {});
+				}
+			});
+			
+			//0.8.
+			$scope.$watch('selectOpts', function(newVal, oldVal) {
+				if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+					optsList['default'] =newVal;
+					formOpts({});		//re-form opts with the new ones
 					selectOpts($scope.ngModel, {});
 				}
 			});

@@ -1,17 +1,22 @@
 /**
 @todo
+- add specific input type directives to be included here (checkbox, etc.)
 - do wide form style (with label to the left of it) [then remove lFormInput directive & form.css & l-form.css, any other remaining form/input builder stuff?)
 - add validation
-- add specific input type directives to be included here (checkbox, select, multi-select, etc.)
 
-NICE TO HAVE (not need to have)
-- would be nice to be able to support transcluded custom inputs (put within the proper input section so still get label and layout to match rest of form) BUT this seems too difficult / not possible without scope:true otherwise ngModel and other scope values are isolated and don't work. Even without that, wouldn't be able to handle validation properly with custom inputs. So maybe this is trying to do too much and we just need to build then link to other directives for each common input type so no custom types are needed (or if they are, they'll just have to manually match the styles/layout of the rest)
+SUPPORTED INPUT TYPES:
+text, textarea, select, multiSelect
+NOT YET SUPPORTED INPUT TYPES:
+checkbox, multiCheckbox, slider, image?
 
 @toc
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
 	@param {String} ngModel Variable for storing the input's value
 	@param {Object} opts
+	@param {Array} [selectOpts] REQUIRED for 'select' type - options; each item is an object of:
+		@param {String} val Value of this option
+		@param {String} name text/html to display for this option
 
 attrs
 	@param {String} [type ='text'] Input type, one of: 'text'
@@ -19,6 +24,7 @@ attrs
 	@param {String} [id ='[random string]'] Id for this input
 	@param {String} [placeholder =''] Placeholder text for input (defaults to attrs.label if placeholder is not defined)
 	@param {String} [label =''] Text for <label> (defaults to attrs.placeholder if label is not defined)
+	@param {Number} [noLabel] Set to 1 to not show label
 	
 
 EXAMPLE usage:
@@ -43,17 +49,29 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 		//terminal: true,		//can NOT be set otherwise ngModel value will be blank / not accurrate		//we need this AND priority - otherwise the form will not be $valid on submit
 		scope: {
 			ngModel:'=',
-			// opts:'=?'		//not supported on stable releases yet (as of 2013.04.30)
-			opts:'='
+			// opts:'=?',		//not supported on stable releases of AngularJS yet (as of 2013.04.30)
+			opts:'=',
+			selectOpts:'='
 		},
 
 		compile: function(element, attrs, transclude) {
 			if(!attrs.type) {
 				attrs.type ='text';		//default
 			}
-			// if(attrs.id ===undefined) {
-				// attrs.id ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
-			// }
+			if(attrs.id ===undefined) {
+				attrs.id ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
+			}
+			var defaults ={'noLabel':0};
+			for(var xx in defaults) {
+				if(attrs[xx] ===undefined) {
+					attrs[xx] =defaults[xx];
+				}
+			}
+			var attrsToInt =['noLabel'];
+			for(var ii=0; ii<attrsToInt.length; ii++) {
+				attrs[attrsToInt[ii]] =parseInt(attrs[attrsToInt[ii]], 10);
+			}
+			
 			var classes =attrs.class || '';
 			var placeholder =attrs.placeholder || attrs.label || '';
 			var label =attrs.label || attrs.placeholder || '';
@@ -65,7 +83,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				label: '',
 				input: ''
 			};
-			if(label) {
+			if(label && !attrs.noLabel) {
 				html.label ="<label>"+label+"</label>";
 			}
 			
@@ -74,8 +92,6 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts'];
 			angular.forEach(attrs, function (value, key) {
 				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
-					// inputEl.attr(snake_case(key, '-'), value);
-					// input[key] = value;
 					customAttrs+=attrs.$attr[key];
 					if(attrs[key]) {
 						customAttrs+='='+attrs[key];
@@ -87,19 +103,22 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			if(attrs.type =='text') {
 				html.input ="<input ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
-			else if(attrs.type =='transclude') {
-				//html.input ="<div ng-transclude></div>";		//doesn't work here with "terminal" set to true..
+			else if(attrs.type =='textarea') {
+				html.input ="<textarea ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+			}
+			else if(attrs.type =='select') {
+				html.input ="<select ng-model='ngModel' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
+			}
+			else if(attrs.type =='multi-select') {
+				html.input ="<div ui-multiselect id='"+attrs.id+"' select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
 			}
 			
 			var htmlFull ="<div>"+html.label+html.input+"</div>";
 			element.replaceWith(htmlFull);
 			
 			return function(scope, element, attrs) {
-				//do the transclude here since ng-transclude doesn't seem to work with 'terminal' set to true
-				if(attrs.type =='transclude') {
-					transclude(scope, function (clone) {
-						element.append(clone);
-					});
+				if(attrs.type =='multi-select') {
+					$compile($(element))(scope);
 				}
 			};
 		},
