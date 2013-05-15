@@ -32,7 +32,7 @@ files = [
 
 // list of files to exclude
 exclude = [];
-
+/*
 // use dots reporter, as travis terminal does not support escaping sequences
 // possible values: 'dots' || 'progress'
 reporter = 'dots';
@@ -57,6 +57,9 @@ autoWatch = false;
 
 // polling interval in ms (ignored on OS that support inotify)
 autoWatchInterval = 0;
+*/
+
+autoWatch = true;
 
 // Start these browsers, currently available:
 // - Chrome

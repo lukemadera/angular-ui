@@ -12,18 +12,21 @@ Table of Contents
 controller
 //0. init vars, etc.
 //15. $scope.focusInput
+//16. $scope.keyupInput
 //14. selectOpts
 //11. filterOpts
 //13. $scope.keydownInput
 //6. $scope.clickInput
 //7. $scope.selectOpt
 //8. $scope.removeOpt
+//8.5. removeDisplayOpt
 //9. $scope.$on('uiMultiselectUpdateOpts',..
 //10. formOpts
 //12. $scope.createNewOpt
 	//12.5. createNewCheck
 //0.5. init part 2 (after functions are declared) - select default options, etc.
 //0.75. $scope.$watch('ngModel',.. - to update selected values on change
+//0.8. $scope.$watch('selectOpts',..
 
 uiMultiselectData service
 //1. init
@@ -60,16 +63,19 @@ controller / js:
 		{'val':2, 'name':'two'},
 		{'val':3, 'name':'three'},
 		{'val':4, 'name':'four'},
-		{'val':5, 'name':'five'},
+		{'val':5, 'name':'five'}
 	];
 	
-	//to update options - NOTE: this must be done AFTER $scope is loaded - the below will NOT work until wrapped inside a callback or timeout so the $scope has time to load
-	var optsNew =[
-		{'val':1, 'name':'yes'},
-		{'val':2, 'name':'no'},
-		{'val':3, 'name':'maybe'},
-	];
-	$scope.$broadcast('uiMultiselectUpdateOpts', {'id':'select1', 'opts':optsNew});
+	//to update options - NOTE: this must be done AFTER $scope is loaded - the below must be wrapped inside a callback or timeout so the $scope has time to load
+	$timeout(function() {
+		var optsNew =[
+			{'val':1, 'name':'yes'},
+			{'val':2, 'name':'no'},
+			{'val':3, 'name':'maybe'}
+		];
+		// $scope.$broadcast('uiMultiselectUpdateOpts', {'id':'select1', 'opts':optsNew});		//OUTDATED but still works
+		$scope.selectOpts =optsNew;
+	}, 500);
 
 //end: EXAMPLE usage
 */
@@ -85,7 +91,9 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 		},
 
 		compile: function(element, attrs) {
-			var defaultsAttrs ={'placeholder':'Type to search', 'minLengthCreate':1};
+			var defaultsAttrs ={'placeholder':'Type to search', 'minLengthCreate':1,
+				'debug':false		//true to show console.log messages
+			};
 			//attrs =angular.extend(defaultsAttrs, attrs);
 			//attrs =libArray.extend(defaultsAttrs, attrs, {});
 			//attrs =$.extend({}, defaultsAttrs, attrs);
@@ -130,6 +138,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 						"<div ng-repeat='opt in selectedOpts' class='ui-multiselect-selected-opt'><div class='ui-multiselect-selected-opt-remove' ng-click='removeOpt(opt, {})'>X</div> {{opt.name}}</div>"+
 					"</div>"+
 					"<div class='ui-multiselect-input-div'>"+
+						// "<input id='"+uiMultiselectData.data[formId1].ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' ui-keyup='{\"tab\":\"keyupInput({})\"}' />"+
 						"<input id='"+uiMultiselectData.data[formId1].ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' />"+
 					"</div>"+
 				"</div>"+
@@ -151,7 +160,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			
 			/*
 			return function(scope, element, attrs, ngModel) {
-				$compile($(element))(scope);		//compile
+				$compile(angular.element(element))(scope);		//compile
 			}
 			*/
 		},
@@ -173,15 +182,48 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			var formId1 =$attrs.formId1;
 			
 			var keycodes ={
-				'enter':13
+				'enter':13,
+				'tab':9
 			};
 			
-			$scope.selectedOpts =[];		//start with none selected
+			//define timings for $timeout's, which must be precise to work properly (so events fire in the correct order)
+			//@todo - fix this so it works 100% of the time - sometimes the options dropdown will close 
+			var evtTimings ={
+				'selectOptBlurReset':225,		//must be LONGER than onBlurDelay to keep options displayed after select one
+				'clickInputBlurReset':225,
+				'onBlurDelay':125		//this must be long enough to ensure the selectOpts click function fires BEFORE this (otherwise the options dropdown will close BEFORE the click event fires and the option will NOT be selected at all..
+			};
 			
-			//form array {} of all options by category; start with just one - the default select opts. This is to allow multiple different types of opts to be used/loaded (i.e. when loading more results from AJAX or when user creates a new option) so can differentiate them and append to/update or show only certain categories of options.
+			/**
+			Form object {} of all options by category; start with just one - the default select opts. This is to allow multiple different types of opts to be used/loaded (i.e. when loading more results from AJAX or when user creates a new option) so can differentiate them and append to/update or show only certain categories of options. All these categories are later merged into one $scope.opts array for actual use.
+			@property optsList
+			@type Object
+			*/
 			var optsList ={
 				'default':libArray.copyArray($scope.selectOpts, {})
 			};
+			
+			/**
+			@property $scope.opts A list of ALL options (combines all optsList categories into one final array of all options). Also adds a few extra key properties to each option, such as "selected". Each item is an object with the following properties detailed below.
+				@param {Mixed} val The value of the option
+				@param {String} name The display value (the text to display)
+				@param {String} selected "0" if this option is not selected, "1" if this option is currently selected
+			@type Array
+			*/
+			$scope.opts =[];
+			
+			/**
+			@property $scope.filteredOpts The subset of $scope.opts that match the search criteria AND are not already selected. These are formed in the $scope.filterOpts function.
+			@type Array
+			*/
+			$scope.filteredOpts =[];
+			
+			/**
+			@property $scope.selectedOpts The displayed selected options (a subset of 
+			@type Array
+			*/
+			$scope.selectedOpts =[];		//start with none selected
+			
 			//copy default (passed in) opts to final / combined (searchable) opts
 			formOpts({});
 			
@@ -190,14 +232,66 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			uiMultiselectData.toggleDropdown($attrs.formId1, {'hide':true});		//start dropdown hidden
 			
 			$("#"+uiMultiselectData.data[formId1].ids.input).keyup(function(evt) {
-				$scope.keydownInput(evt, {});
+				//if(evt.keyCode ==keycodes.tab) {		//if tab character, blur the options
+				if(0) {		//UPDATE: 2013.05.13 - TAB character doesn't seem to consistently fire.. but blur does.. so use blur instead..
+					if($attrs.debug) {
+						console.log('skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+					}
+					uiMultiselectData.blurInput($attrs.formId1, {});
+				}
+				else {		//handle other key inputs (i.e. enter key to select option)
+					$scope.keydownInput(evt, {});
+				}
 			});
+			
+			//UPDATE2 - keyup wasn't working since TAB doesn't fire keyup reliably..
+			//UPDATE: 2013.05.13 - using keyup to handle tab character since TAB will ALWAYS be for a blur so don't need to worry about the timing issues - can just close it immediately
+			//trying to get blur to work but timing seems tricky - firing in wrong order (blur is going before click input..) so need timeout to fix the order
+			$("#"+uiMultiselectData.data[formId1].ids.input).blur(function(evt) {
+				$timeout(function() {
+					if(!uiMultiselectData.data[$attrs.formId1].skipBlur) {		//only blur if not trying to skip it
+						if($attrs.debug) {
+							console.log('skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+						}
+						uiMultiselectData.blurInput($attrs.formId1, {});
+					}
+				}, evtTimings.onBlurDelay);
+			});
+			
+			/*
+			//15.5.
+			$scope.blurInput =function(params) {
+				$("#"+uiMultiselectData.data[formId1].ids.input).blur();
+			};
+			
+			$scope.$on('uiMultiselectBlur', function(evt, params) {
+				console.log('uiMultiselectBlur '+$attrs.formId1);
+				uiMultiselectData.blurInput($attrs.formId1, {});
+			});
+			*/
 			
 			//15.
 			$scope.focusInput =function(params) {
 				$("#"+uiMultiselectData.data[formId1].ids.input).focus();
 				$scope.clickInput({});
 			};
+			
+			/**
+			UPDATE: 2013.05.13 - does NOT work all the time so no longer using it. When had another form on the page this wouldn't fire at all.. ui-keypress may have a bug??!
+			Handles hitting tab on input to blur it
+			@toc 16.
+			@method $scope.keyupInput
+			@param {Object} params
+			*/
+			/*
+			$scope.keyupInput =function(params) {
+				console.log('keyupTabInput');
+				if(!uiMultiselectData.data[$attrs.formId1].skipBlur) {
+					uiMultiselectData.blurInput($attrs.formId1, {});
+				}
+			};
+			*/
+			
 			
 			//14.
 			/*
@@ -213,6 +307,45 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 							break;		//don't bother searching the other option types
 						}
 					}
+				}
+			}
+			
+			/**
+			Removes either all or a subset of selected values (and updates display as well to remove options)
+			@toc 17.
+			@method removeOpts
+			@param {Object}
+				@param {Array} [valsToRemove] The values of the options to remove (i.e. that match $scope.ngModel)
+				@param {Boolean} [displayOnly] True to only remove the option from the selected array / DOM (i.e. if coming from an ngModel $watch call and the ngModel has already been updated, in which case ONLY want to update the display values as the model has already been updated)
+				// @param {Boolean} [all] True to remove ALL selected values (based on $scope.ngModel) and displayed options
+			*/
+			function removeOpts(params) {
+				var defaults ={
+					displayOnly: false
+				};
+				//extend defaults
+				var xx;
+				for(xx in defaults) {
+					if(params[xx] ===undefined) {
+						params[xx] =defaults[xx];
+					}
+				}
+				if(params.valsToRemove !==undefined && params.valsToRemove.length >0) {
+					var ii;
+					for(ii =0; ii<params.valsToRemove.length; ii++) {
+						//find full opt object in $scope.opts
+						var index1 =libArray.findArrayIndex($scope.opts, 'val', params.valsToRemove[ii], {});
+						if(index1 >-1) {		//if found, remove it. It's important to pass in the full option from $scope.opts
+							if(params.displayOnly) {
+								removeDisplayOpt($scope.opts[index1], {bulkRemove: true});
+							}
+							else {
+								$scope.removeOpt($scope.opts[index1], {bulkRemove: true});
+							}
+						}
+					}
+					//re-filter now that all options are updated
+					$scope.filterOpts({});
 				}
 			}
 			
@@ -240,7 +373,6 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 						$scope.createNewAllowed =false;
 					}
 				}
-				//var dummy =1;
 			};
 			
 			//6.
@@ -251,7 +383,10 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				//fail safe to clear skip blur trigger (sometimes it doesn't get immediately called..)
 				$timeout(function() {
 					uiMultiselectData.data[$attrs.formId1].skipBlur =false;		//reset
-				}, 150);
+					if($attrs.debug) {
+						console.log('clickInput skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+					}
+				}, evtTimings.clickInputBlurReset);
 			};
 			
 			//7.
@@ -259,9 +394,15 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				var valChanged =false;		//track if something actually changed (other than just display)
 				//alert(opt.name);
 				uiMultiselectData.data[$attrs.formId1].skipBlur =true;		//avoid immediate closing from document click handler
+				if($attrs.debug) {
+					console.log('selectOpt. skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+				}
 				$timeout(function() {
 					uiMultiselectData.data[$attrs.formId1].skipBlur =false;		//reset
-				}, 150);
+					if($attrs.debug) {
+						console.log('selectOpt skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+					}
+				}, evtTimings.selectOptBlurReset);
 				var index1;
 				index1 =libArray.findArrayIndex($scope.ngModel, '', opt.val, {'oneD':true});
 				if(index1 <0) {
@@ -287,7 +428,13 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				}
 			};
 			
-			//8.
+			/**
+			@toc 8.
+			@param {Object} opt Object with option info. This MUST be a subset (one particular option item) of $scope.opts as it's properties will be directly updated and are expected to update the $scope.opts array accordingly.
+				@param {Mixed} val Value to remove
+			@param {Object} params
+				@param {Boolean} bulkRemove True if this function is being called in a loop so just want to remove the option and do the bare minimum (i.e. for performance, won't call $scope.filterOpts each time - the calling function will be responsible for calling this ONCE at the end of the loop)
+			*/
 			$scope.removeOpt =function(opt, params) {
 				var valChanged =false;
 				var index1;
@@ -295,22 +442,8 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				if(index1 >-1) {
 					valChanged =true;
 					$scope.ngModel.remove(index1);
-					/*
-					if(params.attrs.formChangeEvt !=undefined) {
-						var ppTemp ={'val':curVal, 'formId':params.attrs.formId, 'formChangeEvt':params.attrs.formChangeEvt};
-						if(params.attrs.formChangeId) {
-							ppTemp.formChangeId =params.attrs.formChangeId;
-						}
-						thisObj.onChange(instId, ppTemp);
-					}
-					*/
-					opt.selected ="0";
-					//remove from selected opts array
-					index1 =libArray.findArrayIndex($scope.selectedOpts, 'val', opt.val, {});
-					if(index1 >-1) {
-						$scope.selectedOpts.remove(index1);
-					}
-					$scope.filterOpts({});
+					
+					removeDisplayOpt(opt, params);
 				}
 				
 				if(valChanged) {
@@ -319,6 +452,27 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 					}
 				}
 			};
+			
+			/**
+			This removes a (selected) option from the $scope.selectedOpts array (thus updating the DOM). It also re-filters the options by calling $scope.filterOpts
+			@toc 8.5.
+			@method removeDisplayOpt
+			@param {Object} opt Object with option info. This MUST be a subset (one particular option item) of $scope.opts as it's properties will be directly updated and are expected to update the $scope.opts array accordingly.
+				@param {Mixed} val Value to remove
+			@param {Object} params
+				@param {Boolean} bulkRemove True if this function is being called in a loop so just want to remove the option and do the bare minimum (i.e. for performance, won't call $scope.filterOpts each time - the calling function will be responsible for calling this ONCE at the end of the loop)
+			*/
+			function removeDisplayOpt(opt, params) {
+				opt.selected ="0";
+				//remove from selected opts array
+				index1 =libArray.findArrayIndex($scope.selectedOpts, 'val', opt.val, {});
+				if(index1 >-1) {
+					$scope.selectedOpts.remove(index1);
+				}
+				if(params.bulkRemove ===undefined || !params.bulkRemove) {
+					$scope.filterOpts({});
+				}
+			}
 			
 			//9.
 			/*
@@ -415,6 +569,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				//if(newVal !=oldVal) {
 				//if(1) {		//comparing equality on arrays doesn't work well..
 				if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+					removeOpts({valsToRemove: oldVal, displayOnly:true});		//remove old values first
 					selectOpts($scope.ngModel, {});
 				}
 			});
@@ -469,11 +624,14 @@ var inst ={
 	*/
 	toggleDropdown: function(instId, params) {
 		var id1 =this.data[instId].ids.dropdown;
+		var ele =document.getElementById(id1);
 		if(params.hide ===true) {
-			$("#"+id1).addClass('hidden');
+			angular.element(ele).addClass('hidden');
+			// $("#"+id1).addClass('hidden');
 		}
 		else {
-			$("#"+id1).removeClass('hidden');
+			angular.element(ele).removeClass('hidden');
+			// $("#"+id1).removeClass('hidden');
 		}
 	},
 	
@@ -486,16 +644,22 @@ var inst ={
 		
 		this.toggleDropdown(instId, {'show':true});		//required otherwise sometimes it won't be correct..
 
-		var top1 =eles.displayBox.offset().top;
-		var left1 =eles.displayBox.offset().left;
-		//var bottom1 =0;
-		var bottom1 =eles.dropdown.offset().top +eles.dropdown.outerHeight();
-		var right1 =left1 +eles.displayBox.outerWidth();
-		
-		this.toggleDropdown(instId, {'hide':true});		//revert
+		var top1 =0, left1 =0, right1 =0, bottom1 =0;
+		if(!eles.displayBox.offset() || !eles.dropdown.offset()) {
+			console.log('getFocusCoords offset() null..');		//is null in Testacular...
+		}
+		else {
+			top1 =eles.displayBox.offset().top;
+			left1 =eles.displayBox.offset().left;
+			//bottom1 =0;
+			bottom1 =eles.dropdown.offset().top +eles.dropdown.outerHeight();
+			right1 =left1 +eles.displayBox.outerWidth();
+		}
 		
 		this.data[instId].blurCoords ={'left':left1, 'right':right1, 'top':top1, 'bottom':bottom1};
 		//console.log("blur coords: left: "+this.data[instId].blurCoords.left+" right: "+this.data[instId].blurCoords.right+" top: "+this.data[instId].blurCoords.top+" bottom: "+this.data[instId].blurCoords.bottom);
+
+		this.toggleDropdown(instId, {'hide':true});		//revert
 	},
 	
 	//4.
@@ -503,8 +667,14 @@ var inst ={
 		if(!this.data[instId].skipBlur) {
 			//console.debug('blurring '+instId);
 			this.toggleDropdown(instId, {'hide':true});
+			if(this.data[instId].attrs.debug) {
+				console.log('blurInput reset, skipBlur: '+this.data[instId].skipBlur);
+			}
 		}
-		this.data[instId].skipBlur =false;		//reset
+		// this.data[instId].skipBlur =false;		//reset
+		// if(this.data[instId].attrs.debug) {
+			// console.log('blurInput reset, skipBlur: '+this.data[instId].skipBlur);
+		// }
 	},
 	
 	//5.

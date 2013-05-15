@@ -45,7 +45,7 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 		@example ['first', 'last', 'header.title']
 			NOTE: 'header.title' will search in header['title'] if filterFieldsDotNotation is set to true. Otherwise it will look in a NON-NESTED key that has a "." as part of it
 				i.e. array['header.title'] VS array['header']['title']
-	@param {Object} [opts ={}] Additional scope variables that can be used
+	@param {Object} opts ={} Additional scope variables that can be used
 		@param {String} [searchText =''] text to search for (will be used as ng-model for input)
 		@param {Array} [watchItemKeys ='main'] keys to $watch; if these are updated in $scope (i.e. outside the directive), it will re-form itemsFiltered in the directive
 	@param {Function} loadMore function to call to load more results (this should update $scope.itemsRaw, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
@@ -187,7 +187,8 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			itemsRaw: '=',
 			itemsFiltered: '=',
 			filterFields:'=',
-			loadMore:'&'
+			loadMore:'&',
+			opts: '='
 		},
 
 		compile: function(element, attrs) {
@@ -245,11 +246,14 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			}
 			
 			if($scope.opts ===undefined) {
-				$scope.opts ={
-					searchText: '',
-					watchItemKeys: ['main']
-				};
+				$scope.opts ={};
 			}
+			var defaultOpts ={
+				searchText: '',
+				watchItemKeys: ['main']
+			};
+			$scope.opts =angular.extend(defaultOpts, $scope.opts);
+
 			$scope.trigs ={'loading':false};
 			$scope.items =[];
 			$scope.page =1;		//will store what page (broken up by pageSize attr) we're on

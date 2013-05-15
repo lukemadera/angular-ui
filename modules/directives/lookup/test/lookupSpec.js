@@ -1,21 +1,22 @@
 describe('uiLookup', function () {
 	var elm, scope, $compile;
 	
-  beforeEach(module('ui'));
+	beforeEach(module('ui'));
 	
 	/**
 	@param params
-		@param searchText {String}
-		@param noLoadMore {Boolean} true if want to set load-more to 0
+		@param {Object} opts
+			@param {String} searchText
+		@param {Boolean} noLoadMore true if want to set load-more to 0
 	*/
 	var createElm =function(params) {
 		//NOTE: the leading / wrapping div is NECESSARY otherwise the html is blank.. not sure why.. i.e. if just start with <div ui-lookup... as the first div it will NOT work..
 		var html ="<div>";
 			if(params.noLoadMore) {
-				html+="<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='0' search-text='searchText' watch-item-keys='watchItemKeys'>";
+				html+="<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='0' opts='opts'>";
 			}
 			else {
-				html+="<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='loadMore' search-text='searchText' watch-item-keys='watchItemKeys'>";
+				html+="<div ui-lookup items-raw='usersRaw' items-filtered='users' filter-fields='filterFields' load-more='loadMore' opts='opts'>";
 			}
 				html+="<div class='friends-user' ng-repeat='user in users'>"+
 					"{{user.name}}"+
@@ -26,12 +27,13 @@ describe('uiLookup', function () {
 		
 		//scope =$rootScope;
 		
-		//scope.searchText ='bryan';
-		scope.searchText ='';
-		if(params.searchText) {
-			scope.searchText =params.searchText;
-		}
-		scope.watchItemKeys =['main'];
+		var defaultOpts ={
+			// searchText: 'bryan'
+			searchText: '',
+			watchItemKeys: ['main']
+		};
+		scope.opts =angular.extend(defaultOpts, params.opts);
+
 		scope.users =[];
 		scope.filterFields =['name'];
 		scope.usersRaw ={
@@ -77,10 +79,10 @@ describe('uiLookup', function () {
 		scope.$digest();
 	};
 	
-  beforeEach(inject(function(_$rootScope_, _$compile_) {
+	beforeEach(inject(function(_$rootScope_, _$compile_) {
 		$compile = _$compile_;
-    scope = _$rootScope_.$new();
-  }));
+		scope = _$rootScope_.$new();
+	}));
 	
 	afterEach(function() {
 		angular.module('ui.config').value('ui.config', {}); // cleanup
@@ -98,28 +100,28 @@ describe('uiLookup', function () {
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(10);
 		
-		createElm({'searchText':'bryan'});
+		createElm({'opts':{searchText:'bryan'}});
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(1);
 		
-		createElm({'searchText':'w'});
+		createElm({opts:{'searchText':'w'}});
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(2);
 		
-		createElm({'searchText':'a'});
+		createElm({opts:{'searchText':'a'}});
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(8);
 		
-		createElm({'searchText':'tt'});
+		createElm({opts:{'searchText':'tt'}});
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(2);
 		
-		createElm({'searchText':'b'});
+		createElm({opts:{'searchText':'b'}});
 		users =elm.find('div.friends-user');
 		//expect(scope.users.length).toBe(5);		//seems to work also
 		expect(users.length).toBe(5);
 		
-		createElm({'searchText':'bs'});
+		createElm({opts:{'searchText':'bs'}});
 		users =elm.find('div.friends-user');
 		expect(users.length).toBe(0);
 		

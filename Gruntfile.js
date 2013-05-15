@@ -94,14 +94,17 @@ module.exports = function (grunt) {
 					//singleRun:      true,
 					//configFile:     publicPathRelativeRoot+'config/testacular.conf.js',
 					configFile:     'test/test-config.js',
-					runnerPort:     9876		//not sure why it's 9876 but putting it to 8080 doesn't work..
+					// runnerPort:     9876		//not sure why it's 9876 but putting it to 8080 doesn't work..
+					port:           9876,
+                    runnerPort:     9877
 				}
 			}
 		},
 		testacularRun: {
 			unit: {
 				options: {
-					runnerPort: 9876		//should match what's in testacular above?
+					// runnerPort: 9876		//should match what's in testacular above?
+					runnerPort: 9877
 				}
 			}
 		},
@@ -168,6 +171,7 @@ module.exports = function (grunt) {
 	});
 	*/
 	
+	/*
 	grunt.registerTask('server', ['testacular']);
 	//grunt.registerTask('test1', ['testacular', 'testacularRun']);
 	//grunt.registerTask('test1', ['server', 'testacularRun']);
@@ -175,7 +179,18 @@ module.exports = function (grunt) {
 		grunt.log.subhead('Make sure the testacular server is online: run `grunt server` in a separate console / terminal / command prompt.\nAlso make sure you have a browser open to http://localhost:8080/\n');
 		grunt.task.run(['testacularRun']);
 	});
+	*/
+	
+	//start testacular server
+	grunt.registerTask('server', 'run testacular server and tests', function() {
+		grunt.log.subhead('Make sure you have a browser open to http://localhost:9876/\nYou can quit this task with `Ctrl+C` once the tests are complete.\n');
+		grunt.task.run(['testacular']);
+	});
 	
 	// Default task.
-	grunt.registerTask('default', ['build', 'test']);
+	// grunt.registerTask('default', ['build', 'test']);
+	grunt.registerTask('default', ['build', 'server']);
+	
+	//Quick task
+	grunt.registerTask('q', ['build']);
 };
