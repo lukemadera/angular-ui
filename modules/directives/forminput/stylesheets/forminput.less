@@ -1,2 +1,143 @@
 
 /* ui-forminput */
+
+.ui-forminput input, .ui-forminput select {
+	width:100%;
+}
+.ui-forminput textarea {
+	width: 100%;
+	height: 100%;
+	padding: 5px;
+	margin: 5px 0;
+	/*border: solid 1px black;*/
+}
+//.ui-forminput label {
+.ui-forminput-cont {
+	text-align:left;
+}
+.ui-forminput-validation {
+	padding-bottom:9px;
+}
+
+
+/*
+.ui-forminput-input-container input {
+	padding: 5px 10px;
+	border:solid 1px black;
+}
+.ui-forminput-multi-checkbox-item {
+	display:inline-block;
+	margin:0 5px;
+}
+.ui-forminput-input-container-outer
+{
+	padding:5px 0;
+}
+.ui-forminput-input-container-outer.static
+{
+	padding:0;
+}
+*/
+
+
+/* get button to layout / act like div element instead */
+button[type='submit'], .ui-forminput-submit {
+	display:block;
+	width:100%;
+	font-size:inherit;
+	font-family:inherit;
+	max-width:150px;
+	margin:0 auto;
+	margin-top:8px;
+}
+
+
+/* side by side label layout */
+@width-wide: 85;
+@width-wider: 115;
+@width-widest: 145;
+@input-margin-right: 10;
+@input-extra-margin: 4;
+
+.ui-forminput-form.wide .ui-forminput, .ui-forminput-form.wider .ui-forminput, .ui-forminput-form.widest .ui-forminput
+{
+	.flexbox();
+	// corrects firefox
+	width: 100%;
+	.flex-direction(row);
+}
+/*
+.wide .ui-forminput.styled-checkbox, .wider .ui-forminput.styled-checkbox, .widest .ui-forminput.styled-checkbox
+{
+	display:block;
+}
+*/
+
+.ui-forminput-form.wide label, .ui-forminput-form.wider label, .ui-forminput-form.widest label
+{
+	margin-top:.4em;
+	text-align:right;
+	margin-right:@input-margin-right*1px;
+}
+.ui-forminput-form.wide label
+{
+	width:@width-wide*1px;
+}
+.ui-forminput-form.wider label
+{
+	width:@width-wider*1px;
+}
+.ui-forminput-form.widest label
+{
+	width:@width-widest*1px;
+}
+.ui-forminput-form.wide .ui-forminput-input, .ui-forminput-form.wider .ui-forminput-input, .ui-forminput-form.widest .ui-forminput-input
+{
+	/*float:left;*/
+	.flex(1);
+	margin:2px (@input-extra-margin*1px);		//give some spacing to reduce chances of input overflowing (i.e. for border-radius rounded corners)
+}
+
+.ui-forminput-form.wide button[type='submit'], .ui-forminput-form.wide .ui-forminput-submit, .ui-forminput-form.wide .ui-forminput-validation {
+	margin-left:(@width-wide+@input-margin-right+@input-extra-margin)*1px;
+	/*max-width:100%;*/
+}
+.ui-forminput-form.wider button[type='submit'], .ui-forminput-form.wider .ui-forminput-submit, .ui-forminput-form.wider .ui-forminput-validation {
+	margin-left:(@width-wider+@input-margin-right+@input-extra-margin)*1px;
+	/*max-width:100%;*/
+}
+.ui-forminput-form.widest button[type='submit'], .ui-forminput-form.widest .ui-forminput-submit, .ui-forminput-form.widest .ui-forminput-validation {
+	margin-left:(@width-widest+@input-margin-right+@input-extra-margin)*1px;
+	/*max-width:100%;*/
+}
+.ui-forminput-form.wide .ui-forminput-validation, .ui-forminput-form.wider .ui-forminput-validation, .ui-forminput-form.widest .ui-forminput-validation {
+	padding-top:2px;
+}
+
+
+/* columns */
+.ui-forminput-cols-50, .ui-forminput-cols-25, .ui-forminput-cols-75 {
+	display:inline-block;
+	vertical-align:top;
+}
+.ui-forminput-cols-50 {
+	width:47.5%;
+	margin:1%;
+}
+.ui-forminput-cols-25 {
+	width:22.5%;
+	margin:1%;
+}
+.ui-forminput-cols-75 {
+	width:72.5%;
+	margin:1%;
+}
+.ui-forminput-cols-50:first-child, .ui-forminput-cols-50.first, .ui-forminput-cols-25:first-child, .ui-forminput-cols-25.first, .ui-forminput-cols-75:first-child, .ui-forminput-cols-75.first {
+	margin-left:0%;
+	margin-right:2%;
+}
+.ui-forminput-cols-50:last-child, .ui-forminput-cols-50.last, .ui-forminput-cols-25:last-child, .ui-forminput-cols-25.last, .ui-forminput-cols-75:last-child, .ui-forminput-cols-75.last {
+	margin-left:2%;
+	margin-right:0%;
+}
+/* end: columns */

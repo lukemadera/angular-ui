@@ -1,11 +1,13 @@
 /**
 @todo
 - add specific input type directives to be included here (checkbox, etc.)
-- do wide form style (with label to the left of it) [then remove lFormInput directive & form.css & l-form.css, any other remaining form/input builder stuff?)
-- add validation
+- add more/customized validation
+
+Adds consistent layout (inluding input labels) and styling to an input element so groups of inputs all look the same. Also adds validation. Basically makes it faster and easier to build forms by making it just 1 line of directive code in your partial (rather than several) to create a full, nice looking input.
+This directive is typically NOT meant to be used with just one input by itself or for a group of inputs that do NOT have a lot in common - since the whole point of this directive is to make a GROUP of inputs look the same.
 
 SUPPORTED INPUT TYPES:
-text, textarea, select, multiSelect
+text, password, textarea, select, multiSelect
 NOT YET SUPPORTED INPUT TYPES:
 checkbox, multiCheckbox, slider, image?
 
@@ -14,8 +16,10 @@ checkbox, multiCheckbox, slider, image?
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
 	@param {String} ngModel Variable for storing the input's value
 	@param {Object} opts
-	@param {Array} [selectOpts] REQUIRED for 'select' type - options; each item is an object of:
-		@param {String} val Value of this option
+		@param {Function} [ngChange] Will be called AFTER the value is updated
+		@param {Object} [validationMessages] Key-value pairs of validation messages to display (i.e. {minlength: 'Too short!'} )
+	@param {Array} [selectOpts] REQUIRED for 'select' type. These are options for the <select>. Each item is an object of:
+		@param {String} val Value of this option. NOTE: this should be a STRING, not a number or int type variable. Values will be coerced to 'string' here but for performance and to ensure accurate display, pass these in as strings (i.e. 1 would become '1'). UPDATE: they may not actually have to be strings but this type coercion ensures the ngModel matches the options since 1 will not match '1' and then the select value won't be set properly. So basically types need to match so just keep everything in strings. Again, ngModel type coercion will be done here but it's best to be safe and just keep everything as strings.
 		@param {String} name text/html to display for this option
 
 attrs
@@ -35,11 +39,17 @@ controller / js:
 $scope.formVals ={
 	'title':'test title here'
 };
-$scope.opts ={}
+$scope.opts ={
+	ngChange: function() {$scope.searchTasks({}); }
+};
+
+$scope.searchTasks =function() {
+	//do something
+};
 
 //end: EXAMPLE usage
 */
-angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile', '$http', function (uiConfig, $compile, $http) {
+angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile', '$http', '$timeout', function (uiConfig, $compile, $http, $timeout) {
   return {
 		restrict: 'A',
 		//NOTE: transclude and terminal don't play nice together and those plus priority are finicky; I don't really understand it, but in order for BOTH the $scope.form.$valid to be accurate AND the ngModel to carry through, need:
@@ -53,6 +63,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			opts:'=',
 			selectOpts:'='
 		},
+		require: '?^form',		//if we are in a form then we can access the formController (necessary for validation to work)
 
 		compile: function(element, attrs, transclude) {
 			if(!attrs.type) {
@@ -75,13 +86,17 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			var classes =attrs.class || '';
 			var placeholder =attrs.placeholder || attrs.label || '';
 			var label =attrs.label || attrs.placeholder || '';
+			if(!attrs.name) {
+				attrs.name =attrs.id;
+			}
 			
 			//was going to try to put html in templates but since don't have access to scope in compile function, there's no way to set dynamic values, which is the whole point of this directive.. Plus it's better for performance to just have things here, even though it breaks the "separation of html and javascript" convention..
 			// $http.get('template/' + template + '.html', {cache:$templateCache}).then(function(response) {
 			// });
 			var html ={
 				label: '',
-				input: ''
+				input: '',
+				validation: ''
 			};
 			if(label && !attrs.noLabel) {
 				html.label ="<label>"+label+"</label>";
@@ -89,7 +104,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			
 			//copy over attributes
 			var customAttrs ='';		//string of attrs to copy over to input
-			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts'];
+			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name'];
 			angular.forEach(attrs, function (value, key) {
 				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
 					customAttrs+=attrs.$attr[key];
@@ -101,28 +116,81 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			});
 			
 			if(attrs.type =='text') {
-				html.input ="<input ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
+			}
+			else if(attrs.type =='password') {
+				html.input ="<input class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='textarea') {
-				html.input ="<textarea ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+				html.input ="<textarea class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
 			}
 			else if(attrs.type =='select') {
-				html.input ="<select ng-model='ngModel' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
+				html.input ="<select class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
 			}
 			else if(attrs.type =='multi-select') {
-				html.input ="<div ui-multiselect id='"+attrs.id+"' select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
+				html.input ="<div class='ui-forminput-input' name='"+attrs.name+"' ui-multiselect id='"+attrs.id+"' select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
 			}
 			
-			var htmlFull ="<div>"+html.label+html.input+"</div>";
+			//validation
+			html.validation ="<div class='ui-forminput-validation text-error' ng-repeat='(key, error) in field.$error' ng-show='error && field.$dirty' class='help-inline'>{{opts1.validationMessages[key]}}</div>";
+			
+			var htmlFull ="<div class='ui-forminput-cont'><div class='ui-forminput'>"+html.label+html.input+"</div>"+html.validation+"</div>";
 			element.replaceWith(htmlFull);
 			
-			return function(scope, element, attrs) {
+			return function(scope, element, attrs, formCtrl) {
 				if(attrs.type =='multi-select') {
 					$compile($(element))(scope);
+				}
+				if(formCtrl) {
+					scope.field =formCtrl[attrs.name];
 				}
 			};
 		},
 		controller: function($scope, $element, $attrs) {
+			$scope.opts1 ={};		//can't use $scope.opts in case it's not defined/set otherwise get "Non-assignable model expression.." error..
+			var defaultOpts ={
+				validationMessages: {
+					required: 'Required!',
+					minlength: 'Too short!',
+					maxlength: 'Too long!',
+					pattern: 'Invalid characters!'
+					// number: 'Must be a number!'		//not working
+				}
+			};
+			if(!$scope.opts || $scope.opts ===undefined) {
+				$scope.opts1 =defaultOpts;
+			}
+			else {		//extend defaults
+				var xx;
+				for(xx in defaultOpts) {
+					$scope.opts1[xx] =defaultOpts[xx];
+				}
+			}
+			
+			//<select> opts must be STRINGS otherwise they won't work properly (number values will just have 0, 1, 2, etc. as values). UPDATE: this may not actually be true - inspecting the HTML will always show "value='0'" "value='1'" for the select option values but they should still work properly. What IS important is that types match between the option values and the ngModel. Thus we're not type forcing ngModel to be a string to ensure they both match.
+			if($attrs.type =='select' || $attrs.type =='multiSelect') {
+				if($scope.ngModel !==undefined && typeof($scope.ngModel) !=='string') {		//NOTE: MUST first check that ngModel is not undefined since otherwise converting to string will cause errors later
+					$scope.ngModel =$scope.ngModel.toString();		//ensure BOTH ngModel and options are both strings
+				}
+				var ii;
+				for(ii =0; ii<$scope.selectOpts.length; ii++) {
+					if(typeof($scope.selectOpts[ii].val) =='number') {
+						$scope.selectOpts[ii].val =$scope.selectOpts[ii].val.toString();
+					}
+					else {		//assume they're all the same format so if find one non-number, break (for performance reasons)
+						break;
+					}
+				}
+			}
+			
+			if($scope.opts && $scope.opts.ngChange) {
+				$scope.onchange =function(params) {
+					//timeout first so the value is updated BEFORE change fires
+					$timeout(function() {
+						$scope.opts.ngChange();
+					}, 50);
+				};
+			}
 		}
 	};
 }])
