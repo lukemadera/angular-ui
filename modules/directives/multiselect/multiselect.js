@@ -103,23 +103,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				}
 			}
 			
-			/*
-			// if(attrs.id ===undefined) {
-			if(1) {		//ensure unique for ng-repeat (plus will get over-written in link function anyway..)
-				attrs.id ="uiMultiselect"+Math.random().toString(36).substring(7);
-			}
-			
-			attrs.ids ={
-				'displayBox':attrs.id+"DisplayBox",
-				'input':attrs.id+"Input",
-				'dropdown':attrs.id+"Dropdown",
-				'selectedOpts':attrs.id+"SelectedOpts",
-				'selectedOpt':attrs.id+"SelectedOpt",
-				'remove':attrs.id+"Remove",
-				'opt':attrs.id+"Opt"
-			};
-			*/
-			
+			//NOTE: must set id's using the scope since if use attrs.id(s) here and this directive is inside an ng-repeat, all instances will have the SAME id and this isn't allowed and will break things! It took a long time to figure out the right syntax and combination of compile, link, & controller function (as well as $timeout usage) to get this all to work (unique id's to be set, events to get registered properly on the correct id's, ng-repeat for filteredOpts to show up (doing $compile a 2nd time in the link function breaks the ng-repeat here..) etc.)
 			var html ="<div>";
 			html+="<div id='{{id}}' class='ui-multiselect'>";
 				html+="<div id='{{ids.displayBox}}' class='ui-multiselect-display-box' ng-click='focusInput({})'>"+
@@ -145,25 +129,6 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			html+="</div>";
 			element.replaceWith(html);
 			
-			/*
-			uiMultiselectData.data[attrs.id] ={
-					'ids':attrs.ids,
-					'opts':{},		//NOTE: options are passed in as [] but converted to object / associative array here
-					'blurCoords':{'left':-1, 'right':-1, 'top':-1, 'bottom':-1},
-					'skipBlur':false,		//trigger to avoid immediate close for things like clicking the input
-					//'ngModel':attrs.ngModel,
-					//'scope':scope,
-					//'ngModel':ngModel,
-					'lastSearchVal':'',		//default to blank
-					'attrs':attrs,
-					'maxWrite':25		//int of how many to stop writing after (for performance, rest are still searchable)
-				};
-				
-				// if(!uiMultiselectData.inited) {
-					uiMultiselectData.init({});
-				// }
-				*/
-			
 
 			return function(scope, element, attrs, ngModel) {
 				var xx;		//used in for loops later
@@ -179,6 +144,7 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 					}
 				}
 				
+				//IMPORTANT: set id's HERE (AFTER compile function) to ensure they're UNIQUE in case this directive is in an ng-repeat!!!
 				// var oldId =attrs.id;
 				attrs.id ="uiMultiselect"+Math.random().toString(36).substring(7);
 				
@@ -196,11 +162,6 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				scope.id =attrs.id;
 				scope.ids =attrs.ids;
 				
-				// delete uiMultiselectData.data[oldId];		//causes infinite load error..
-				// uiMultiselectData.data[oldId] =false;		//causes infinite load error..
-				// uiMultiselectData.data[oldId].blurCoords ={'left':-1, 'right':-1, 'top':-1, 'bottom':-1};
-				
-				if(1) {
 				uiMultiselectData.data[attrs.id] ={
 					'ids':attrs.ids,
 					'opts':{},		//NOTE: options are passed in as [] but converted to object / associative array here
@@ -213,20 +174,10 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 					'attrs':attrs,
 					'maxWrite':25		//int of how many to stop writing after (for performance, rest are still searchable)
 				};
-				}
-				else {
-				uiMultiselectData.data[attrs.id] ={};
-				uiMultiselectData.data[attrs.id].ids =attrs.ids;
-				uiMultiselectData.data[attrs.id].attrs =attrs;
-				}
-				
-				/*
-				var newHtml =element.html().replace(new RegExp(oldId,"gm"), attrs.id);
-				element.html(newHtml);
-				$compile($(element))(scope);
-				*/
 				
 				uiMultiselectData.init({});
+				
+				
 				
 				//used to be in controller but timing is off and controller seems to be executed BEFORE this link function so the attrs.id is not updated yet... so had to move everything from the controller into the link function..
 				//0. init vars, etc.
