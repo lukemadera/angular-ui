@@ -93,4 +93,13 @@ describe('uiMultiselect', function () {
 	});
 	*/
 	
+	/*
+	@todo - more tests once figure out how to write them...
+	it('should have unique id for each select if inside an ng-repeat', function() {
+	});
+	
+	it('should hide the dropdown when hit the TAB key', function() {
+	});
+	*/
+	
 });
