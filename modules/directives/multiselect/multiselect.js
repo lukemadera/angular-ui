@@ -42,7 +42,7 @@ uiMultiselectData service
 		@param {String} name text/html to display for this option
 	@param {Mixed} ngModel
 	@param {Object} config
-		@param {Number} [createNew] int 1 or 0; 1 to allow creating a new option from what the user typed IF it doesn't already exist
+		@param {Number} [createNew =0] int 1 or 0; 1 to allow creating a new option from what the user typed IF it doesn't already exist
 
 @param {Object} attrs REMEMBER: use snake-case when setting these on the partial! i.e. scroll-load='1' NOT scrollLoad='1'
 	@param {String} [id] Id for this element (required to use uiMultiselectUpdateOpts event to update options)
@@ -106,44 +106,29 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			if(attrs.id ===undefined) {
 				attrs.id ="uiMultiselect"+Math.random().toString(36).substring(7);
 			}
-			var formId =attrs.formId =attrs.id;
-			var formId1 =attrs.id;
 			
-			var id1 =formId1;
-			attrs.formId1 =formId1;
-			uiMultiselectData.data[formId1] ={
-			'ids':{
-				'displayBox':id1+"DisplayBox",
-				'input':id1+"Input",
-				'dropdown':id1+"Dropdown",
-				'selectedOpts':id1+"SelectedOpts",
-				'selectedOpt':id1+"SelectedOpt",
-				'remove':id1+"Remove",
-				'opt':id1+"Opt"
-				},
-			'opts':{},		//NOTE: options are passed in as [] but converted to object / associative array here
-			'blurCoords':{'left':-1, 'right':-1, 'top':-1, 'bottom':-1},
-			'skipBlur':false,		//trigger to avoid immediate close for things like clicking the input
-			//'ngModel':attrs.ngModel,
-			//'scope':scope,
-			//'ngModel':ngModel,
-			'lastSearchVal':'',		//default to blank
-			'attrs':attrs,
-			'maxWrite':25		//int of how many to stop writing after (for performance, rest are still searchable)
+			attrs.ids ={
+				'displayBox':attrs.id+"DisplayBox",
+				'input':attrs.id+"Input",
+				'dropdown':attrs.id+"Dropdown",
+				'selectedOpts':attrs.id+"SelectedOpts",
+				'selectedOpt':attrs.id+"SelectedOpt",
+				'remove':attrs.id+"Remove",
+				'opt':attrs.id+"Opt"
 			};
 			
-			var html ="<div id='"+formId1+"' class='ui-multiselect'>";
-				html+="<div id='"+uiMultiselectData.data[formId1].ids.displayBox+"' class='ui-multiselect-display-box' ng-click='focusInput({})'>"+
-					"<div id='"+uiMultiselectData.data[formId1].ids.selectedOpts+"' class='ui-multiselect-selected-opts'>"+
+			var html ="<div id='"+attrs.id+"' class='ui-multiselect'>";
+				html+="<div id='"+attrs.ids.displayBox+"' class='ui-multiselect-display-box' ng-click='focusInput({})'>"+
+					"<div id='"+attrs.ids.selectedOpts+"' class='ui-multiselect-selected-opts'>"+
 						"<div ng-repeat='opt in selectedOpts' class='ui-multiselect-selected-opt'><div class='ui-multiselect-selected-opt-remove' ng-click='removeOpt(opt, {})'>X</div> {{opt.name}}</div>"+
 					"</div>"+
 					"<div class='ui-multiselect-input-div'>"+
-						// "<input id='"+uiMultiselectData.data[formId1].ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' ui-keyup='{\"tab\":\"keyupInput({})\"}' />"+
-						"<input id='"+uiMultiselectData.data[formId1].ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' />"+
+						// "<input id='"+attrs.ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' ui-keyup='{\"tab\":\"keyupInput({})\"}' />"+
+						"<input id='"+attrs.ids.input+"' type='text' ng-change='filterOpts({})' placeholder='"+attrs.placeholder+"' class='ui-multiselect-input' ng-model='modelInput' ng-click='clickInput({})' />"+
 					"</div>"+
 				"</div>"+
 				"<div class='ui-multiselect-dropdown-cont'>"+
-					"<div id='"+uiMultiselectData.data[formId1].ids.dropdown+"' class='ui-multiselect-dropdown'>";
+					"<div id='"+attrs.ids.dropdown+"' class='ui-multiselect-dropdown'>";
 						//html+="<div class='ui-multiselect-dropdown-opt' ng-repeat='opt in opts | filter:{name:modelInput, selected:\"0\"}' ng-click='selectOpt(opt, {})'>{{opt.name}}</div>";
 						html+="<div class='ui-multiselect-dropdown-opt' ng-repeat='opt in filteredOpts' ng-click='selectOpt(opt, {})'>{{opt.name}}</div>";
 						html+="<div class='ui-multiselect-dropdown-opt' ng-show='config.createNew && createNewAllowed && filteredOpts.length <1' ng-click='createNewOpt({})'>[Create New]</div>"+
@@ -154,14 +139,25 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			html+="</div>";
 			element.replaceWith(html);
 			
-			if(!uiMultiselectData.inited) {
-				uiMultiselectData.init({});
-			}
+			uiMultiselectData.data[attrs.id] ={
+				'ids':attrs.ids,
+				'opts':{},		//NOTE: options are passed in as [] but converted to object / associative array here
+				'blurCoords':{'left':-1, 'right':-1, 'top':-1, 'bottom':-1},
+				'skipBlur':false,		//trigger to avoid immediate close for things like clicking the input
+				//'ngModel':attrs.ngModel,
+				//'scope':scope,
+				//'ngModel':ngModel,
+				'lastSearchVal':'',		//default to blank
+				'attrs':attrs,
+				'maxWrite':25		//int of how many to stop writing after (for performance, rest are still searchable)
+			};
+			
+			uiMultiselectData.init({});
 			
 			/*
 			return function(scope, element, attrs, ngModel) {
-				$compile(angular.element(element))(scope);		//compile
-			}
+				// $compile(angular.element(element))(scope);		//compile
+			};
 			*/
 		},
 		
@@ -179,7 +175,6 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			$scope.modelInput ='';
 			$scope.loadingOpt =false;
 			$scope.createNewAllowed =true;		//will be true if create new is currently allowed (i.e. if no duplicate options that already exist with the current input value)
-			var formId1 =$attrs.formId1;
 			
 			var keycodes ={
 				'enter':13,
@@ -228,16 +223,16 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			formOpts({});
 			
 			//get focus coords for toggling dropdown on blur and then hide dropdown
-			uiMultiselectData.getFocusCoords($attrs.formId1, {});		//BEFORE dropdown is hidden, get coords so can handle blur
-			uiMultiselectData.toggleDropdown($attrs.formId1, {'hide':true});		//start dropdown hidden
+			uiMultiselectData.getFocusCoords($attrs.id, {});		//BEFORE dropdown is hidden, get coords so can handle blur
+			uiMultiselectData.toggleDropdown($attrs.id, {'hide':true});		//start dropdown hidden
 			
-			$("#"+uiMultiselectData.data[formId1].ids.input).keyup(function(evt) {
+			$("#"+uiMultiselectData.data[$attrs.id].ids.input).keyup(function(evt) {
 				//if(evt.keyCode ==keycodes.tab) {		//if tab character, blur the options
 				if(0) {		//UPDATE: 2013.05.13 - TAB character doesn't seem to consistently fire.. but blur does.. so use blur instead..
 					if($attrs.debug) {
-						console.log('skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+						console.log('skipBlur: '+uiMultiselectData.data[$attrs.id].skipBlur);
 					}
-					uiMultiselectData.blurInput($attrs.formId1, {});
+					uiMultiselectData.blurInput($attrs.id, {});
 				}
 				else {		//handle other key inputs (i.e. enter key to select option)
 					$scope.keydownInput(evt, {});
@@ -247,13 +242,13 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			//UPDATE2 - keyup wasn't working since TAB doesn't fire keyup reliably..
 			//UPDATE: 2013.05.13 - using keyup to handle tab character since TAB will ALWAYS be for a blur so don't need to worry about the timing issues - can just close it immediately
 			//trying to get blur to work but timing seems tricky - firing in wrong order (blur is going before click input..) so need timeout to fix the order
-			$("#"+uiMultiselectData.data[formId1].ids.input).blur(function(evt) {
+			$("#"+uiMultiselectData.data[$attrs.id].ids.input).blur(function(evt) {
 				$timeout(function() {
-					if(!uiMultiselectData.data[$attrs.formId1].skipBlur) {		//only blur if not trying to skip it
+					if(!uiMultiselectData.data[$attrs.id].skipBlur) {		//only blur if not trying to skip it
 						if($attrs.debug) {
-							console.log('skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+							console.log('skipBlur: '+uiMultiselectData.data[$attrs.id].skipBlur);
 						}
-						uiMultiselectData.blurInput($attrs.formId1, {});
+						uiMultiselectData.blurInput($attrs.id, {});
 					}
 				}, evtTimings.onBlurDelay);
 			});
@@ -261,18 +256,18 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			/*
 			//15.5.
 			$scope.blurInput =function(params) {
-				$("#"+uiMultiselectData.data[formId1].ids.input).blur();
+				$("#"+uiMultiselectData.data[$attrs.id].ids.input).blur();
 			};
 			
 			$scope.$on('uiMultiselectBlur', function(evt, params) {
-				console.log('uiMultiselectBlur '+$attrs.formId1);
-				uiMultiselectData.blurInput($attrs.formId1, {});
+				console.log('uiMultiselectBlur '+$attrs.id);
+				uiMultiselectData.blurInput($attrs.id, {});
 			});
 			*/
 			
 			//15.
 			$scope.focusInput =function(params) {
-				$("#"+uiMultiselectData.data[formId1].ids.input).focus();
+				$("#"+uiMultiselectData.data[$attrs.id].ids.input).focus();
 				$scope.clickInput({});
 			};
 			
@@ -286,8 +281,8 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			/*
 			$scope.keyupInput =function(params) {
 				console.log('keyupTabInput');
-				if(!uiMultiselectData.data[$attrs.formId1].skipBlur) {
-					uiMultiselectData.blurInput($attrs.formId1, {});
+				if(!uiMultiselectData.data[$attrs.id].skipBlur) {
+					uiMultiselectData.blurInput($attrs.id, {});
 				}
 			};
 			*/
@@ -378,13 +373,13 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			//6.
 			$scope.clickInput =function(params) {
 				$scope.filterOpts({});
-				uiMultiselectData.data[$attrs.formId1].skipBlur =true;		//avoid immediate closing from document click handler
-				uiMultiselectData.toggleDropdown($attrs.formId1, {'show':true});
+				uiMultiselectData.data[$attrs.id].skipBlur =true;		//avoid immediate closing from document click handler
+				uiMultiselectData.toggleDropdown($attrs.id, {'show':true});
 				//fail safe to clear skip blur trigger (sometimes it doesn't get immediately called..)
 				$timeout(function() {
-					uiMultiselectData.data[$attrs.formId1].skipBlur =false;		//reset
+					uiMultiselectData.data[$attrs.id].skipBlur =false;		//reset
 					if($attrs.debug) {
-						console.log('clickInput skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+						console.log('clickInput skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.id].skipBlur);
 					}
 				}, evtTimings.clickInputBlurReset);
 			};
@@ -393,14 +388,14 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			$scope.selectOpt =function(opt, params) {
 				var valChanged =false;		//track if something actually changed (other than just display)
 				//alert(opt.name);
-				uiMultiselectData.data[$attrs.formId1].skipBlur =true;		//avoid immediate closing from document click handler
+				uiMultiselectData.data[$attrs.id].skipBlur =true;		//avoid immediate closing from document click handler
 				if($attrs.debug) {
-					console.log('selectOpt. skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+					console.log('selectOpt. skipBlur: '+uiMultiselectData.data[$attrs.id].skipBlur);
 				}
 				$timeout(function() {
-					uiMultiselectData.data[$attrs.formId1].skipBlur =false;		//reset
+					uiMultiselectData.data[$attrs.id].skipBlur =false;		//reset
 					if($attrs.debug) {
-						console.log('selectOpt skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.formId1].skipBlur);
+						console.log('selectOpt skipBlur reset, skipBlur: '+uiMultiselectData.data[$attrs.id].skipBlur);
 					}
 				}, evtTimings.selectOptBlurReset);
 				var index1;
@@ -418,8 +413,8 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 				}
 				//reset search key & refocus on input
 				$scope.modelInput ='';		//reset
-				$("#"+uiMultiselectData.data[formId1].ids.input).focus();
-				//uiMultiselectData.toggleDropdown($attrs.formId1, {'show':true});
+				$("#"+uiMultiselectData.data[$attrs.id].ids.input).focus();
+				//uiMultiselectData.toggleDropdown($attrs.id, {'show':true});
 				$scope.filterOpts({});
 				if(valChanged) {
 					if($attrs.onChangeEvt !==undefined) {
@@ -477,13 +472,13 @@ angular.module('ui.directives').directive('uiMultiselect', ['ui.config', 'uiMult
 			//9.
 			/*
 			@param params
-				id (required) =instance id for this directive (to indentify which select to update opts for); must match the "formId1" attribute declared on this directive
+				id (required) =instance id for this directive (to indentify which select to update opts for); must match the "id" attribute declared on this directive
 				opts (required) =array []{} of opts to update/add
 				type (defaults to 'default') =string of which optsList to add/update these to
 				replace (default true) =boolean true if these new opts will overwrite existing ones of this type (if false, they'll just be appended to the existing ones - NOTE: new opts should not conflict with existing ones; don't pass in any duplicates as these are NOT checked for here)
 			*/
 			$scope.$on('uiMultiselectUpdateOpts', function(evt, params) {
-				if(params.id ==formId1) {		//$scope.$on will be called on EVERY instance BUT only want to update ONE of them
+				if(params.id ==$attrs.id) {		//$scope.$on will be called on EVERY instance BUT only want to update ONE of them
 					var defaults ={'type':'default', 'replace':true};
 					params =angular.extend(defaults, params);
 					if(optsList[params.type] ===undefined || params.replace ===true) {
@@ -600,20 +595,22 @@ var inst ={
 	
 	//1.
 	init: function(params) {
-		var thisObj =this;
-		$(document).click(function(evt) {
-			for(var xx in thisObj.data) {
-				var instId =xx;
-				if(thisObj.data[instId].blurCoords.top >-1) {		//if it's been initialized
-					if(!thisObj.mouseInDiv(evt, '', {'coords':thisObj.data[instId].blurCoords})) {
-						//alert("document click out: "+ee.pageX+" "+ee.pageY);
-						thisObj.blurInput(instId, {});
+		if(!this.inited) {
+			var thisObj =this;
+			$(document).click(function(evt) {
+				for(var xx in thisObj.data) {
+					var instId =xx;
+					if(thisObj.data[instId].blurCoords.top >-1) {		//if it's been initialized
+						if(!thisObj.mouseInDiv(evt, '', {'coords':thisObj.data[instId].blurCoords})) {
+							//alert("document click out: "+ee.pageX+" "+ee.pageY);
+							thisObj.blurInput(instId, {});
+						}
 					}
 				}
-			}
-		});
-		
-		this.inited =true;
+			});
+			
+			this.inited =true;
+		}
 	},
 	
 	//2.

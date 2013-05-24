@@ -69,9 +69,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			if(!attrs.type) {
 				attrs.type ='text';		//default
 			}
-			if(attrs.id ===undefined) {
-				attrs.id ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
-			}
+			
 			var defaults ={'noLabel':0};
 			for(var xx in defaults) {
 				if(attrs[xx] ===undefined) {
@@ -86,9 +84,6 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			var classes =attrs.class || '';
 			var placeholder =attrs.placeholder || attrs.label || '';
 			var label =attrs.label || attrs.placeholder || '';
-			if(!attrs.name) {
-				attrs.name =attrs.id;
-			}
 			
 			//was going to try to put html in templates but since don't have access to scope in compile function, there's no way to set dynamic values, which is the whole point of this directive.. Plus it's better for performance to just have things here, even though it breaks the "separation of html and javascript" convention..
 			// $http.get('template/' + template + '.html', {cache:$templateCache}).then(function(response) {
@@ -116,19 +111,19 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			});
 			
 			if(attrs.type =='text') {
-				html.input ="<input class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='{{name}}' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='password') {
-				html.input ="<input class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='{{name}}' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='textarea') {
-				html.input ="<textarea class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+				html.input ="<textarea class='ui-forminput-input' name='{{name}}' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
 			}
 			else if(attrs.type =='select') {
-				html.input ="<select class='ui-forminput-input' name='"+attrs.name+"' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
+				html.input ="<select class='ui-forminput-input' name='{{name}}' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
 			}
 			else if(attrs.type =='multi-select') {
-				html.input ="<div class='ui-forminput-input' name='"+attrs.name+"' ui-multiselect id='"+attrs.id+"' select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
+				html.input ="<div class='ui-forminput-input' name='{{name}}' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
 			}
 			
 			//validation
@@ -138,6 +133,30 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			element.replaceWith(htmlFull);
 			
 			return function(scope, element, attrs, formCtrl) {
+			
+				//if was in an ng-repeat, they'll have have the same compile function so have to set the id here, NOT in the compile function (otherwise they'd all be the same..)
+				if(attrs.id ===undefined) {
+					attrs.id ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
+				}
+				if(!attrs.name) {
+					attrs.name =attrs.id;
+				}
+				scope.id =attrs.id;
+				scope.name =attrs.name;
+				
+				/*
+				//NOT WORKING..
+				//if was in an ng-repeat, they'll all have the same id's so need to re-write the html with new unique id's..
+				if(scope.$parent.$index !=undefined) {		//ng-repeat has $parent.$index so use this to test
+					var oldId =attrs.id;		//save for replacing later
+					attrs.id ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);		//overwrite with new one (link function is run per each item so this will generate new id's for EACH instance, which is what we want to ensure uniqueness)
+					
+					var newHtml =element.html().replace(new RegExp(oldId,"gm"), attrs.id);
+					element.html(newHtml);
+					$compile($(element))(scope);
+				}
+				*/
+				
 				if(attrs.type =='multi-select') {
 					$compile($(element))(scope);
 				}
