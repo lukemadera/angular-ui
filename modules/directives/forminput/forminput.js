@@ -12,6 +12,11 @@ NOT YET SUPPORTED INPUT TYPES:
 checkbox, multiCheckbox, slider, image?
 
 @toc
+1. init
+2. initSelect
+3. initSelectModel
+4. initSelectOpts
+5. $scope.$watch('ngModel',..
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
 	@param {String} ngModel Variable for storing the input's value
@@ -186,11 +191,52 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				}
 			}
 			
-			//<select> opts must be STRINGS otherwise they won't work properly (number values will just have 0, 1, 2, etc. as values). UPDATE: this may not actually be true - inspecting the HTML will always show "value='0'" "value='1'" for the select option values but they should still work properly. What IS important is that types match between the option values and the ngModel. Thus we're not type forcing ngModel to be a string to ensure they both match.
-			if($attrs.type =='select' || $attrs.type =='multiSelect') {
+			
+			if($scope.opts && $scope.opts.ngChange) {
+				$scope.onchange =function(params) {
+					//timeout first so the value is updated BEFORE change fires
+					$timeout(function() {
+						$scope.opts.ngChange();
+					}, 50);
+				};
+			}
+			
+			
+			/**
+			@toc 1.
+			@method init
+			*/
+			function init(params) {
+				if($attrs.type =='select' || $attrs.type =='multiSelect') {
+					initSelect({});
+				}
+			}
+			
+			/**
+			<select> opts must be STRINGS otherwise they won't work properly (number values will just have 0, 1, 2, etc. as values). UPDATE: this may not actually be true - inspecting the HTML will always show "value='0'" "value='1'" for the select option values but they should still work properly. What IS important is that types match between the option values and the ngModel. Thus we're not type forcing ngModel to be a string to ensure they both match.
+			@toc 2.
+			@method initSelect
+			*/
+			function initSelect(params) {
+				initSelectModel({});
+				initSelectOpts({});
+			}
+			
+			/**
+			@toc 3.
+			@method initSelectModel
+			*/
+			function initSelectModel(params) {
 				if($scope.ngModel !==undefined && typeof($scope.ngModel) !=='string') {		//NOTE: MUST first check that ngModel is not undefined since otherwise converting to string will cause errors later
 					$scope.ngModel =$scope.ngModel.toString();		//ensure BOTH ngModel and options are both strings
 				}
+			}
+			
+			/**
+			@toc 4.
+			@method initSelectOpts
+			*/
+			function initSelectOpts(params) {
 				var ii;
 				for(ii =0; ii<$scope.selectOpts.length; ii++) {
 					if(typeof($scope.selectOpts[ii].val) =='number') {
@@ -202,14 +248,19 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				}
 			}
 			
-			if($scope.opts && $scope.opts.ngChange) {
-				$scope.onchange =function(params) {
-					//timeout first so the value is updated BEFORE change fires
-					$timeout(function() {
-						$scope.opts.ngChange();
-					}, 50);
-				};
-			}
+			/**
+			@toc 5.
+			*/
+			$scope.$watch('ngModel', function(newVal, oldVal) {
+				if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+					//if ngModel changes, have to ensure it's a string - otherwise the currently selected value will NOT be selected (it will just show the blank top option as selected)
+					if($attrs.type =='select' || $attrs.type =='multiSelect') {
+						initSelectModel({});
+					}
+				}
+			});
+			
+			init({});		//init the first time
 		}
 	};
 }])
