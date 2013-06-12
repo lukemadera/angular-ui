@@ -243,7 +243,8 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 						$scope.selectOpts[ii].val =$scope.selectOpts[ii].val.toString();
 					}
 					else {		//assume they're all the same format so if find one non-number, break (for performance reasons)
-						break;
+						// break;
+						var dummy =1;		//breaking isn't a safe assumption - may have default string value and the rest are numbers..
 					}
 				}
 			}

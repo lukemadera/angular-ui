@@ -58,6 +58,10 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 	@param {Number} [loadMorePageSize =20] how many results to load (& thus store in queue) at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
 	@param {String} [loadMoreItemsKey ='extra'] matches a key in the itemsRaw array - this is where items from backend will be loaded into
 	@param {String} [placeholder ='search'] input search placeholder
+	@param {Number} [minSearchLength =2] The minimum number of characters for which to actually search/filter the results (for performance - low number of characters still lead to lots of results)
+	@param {Number} [minSearchShowAll =1] 1 to show ALL items if search term is below the minSearchLength and 0 to show NONE (no items) if below the minSearchLength
+	@param {String} [classInput =''] Style class to apply to input element
+	@param {String} [classInputCont =''] Style class to apply to input container element
 
 
 EXAMPLE usage:
@@ -105,8 +109,9 @@ controller / js:
 	];
 	
 	//@param params
-	//	cursor =int of where to load from
-	//	loadMorePageSize =int of how many to return
+	//	@param {String} searchText
+	//	@param {Number} cursor Where to load from
+	//	@param {Number} loadMorePageSize How many to return
 	$scope.loadMore =function(params, callback) {
 		var results =itemsMore.slice(params.cursor, (params.cursor+params.loadMorePageSize));
 		callback(results, {});
@@ -192,16 +197,17 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'placeholder':'search', 'scrollLoad':'0', 'loadMorePageSize':20, 'loadMoreItemsKey':'extra', 'filterFieldsDotNotation':true, 'pageScroll':0};
+			var defaults ={'pageSize':10, 'placeholder':'search', 'scrollLoad':'0', 'loadMorePageSize':20, 'loadMoreItemsKey':'extra', 'filterFieldsDotNotation':true, 'pageScroll':0, minSearchLength: 2, minSearchShowAll:1, classInput:'', classInputCont:''};
 			for(var xx in defaults) {
 				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}
 			//convert to int
-			attrs.pageSize =parseInt(attrs.pageSize, 10);
-			attrs.loadMorePageSize =parseInt(attrs.loadMorePageSize, 10);
-			attrs.scrollLoad =parseInt(attrs.scrollLoad, 10);
+			var attrsToInt =['pageSize', 'loadMorePageSize', 'scrollLoad', 'minSearchLength', 'minSearchShowAll'];
+			for(var ii=0; ii<attrsToInt.length; ii++) {
+				attrs[attrsToInt[ii]] =parseInt(attrs[attrsToInt[ii]], 10);
+			}
 			//ensure loadMorePageSize is at least as large as pageSize
 			if(attrs.loadMorePageSize <attrs.pageSize) {
 				attrs.loadMorePageSize =attrs.pageSize;
@@ -219,17 +225,18 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			
 			var html="<div class='ui-lookup'>"+
 				"<div class='ui-lookup-top'>"+
-					"<div class='ui-lookup-input-div'>"+
-						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input' ng-model='opts.searchText' ng-click='clickInput({})' />"+
+					"<div class='ui-lookup-input-div "+attrs.classInputCont+"'>"+
+						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input "+attrs.classInput+"' ng-model='opts.searchText' ng-click='clickInput({})' />"+
 					"</div>"+
 					//"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
 					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
-					"<div class='text-warning' ng-show='itemsFiltered.length <1'>No matches</div>"+
+					"<div class='text-warning' ng-show='!trigs.loading && itemsFiltered.length <1 && opts.searchText.length >=minSearchLength'>No matches</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-lookup-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='(noMoreLoadMoreItems && queuedItems.length <1) || (scrollLoad && hasScrollbar)' class='ui-lookup-more btn-link' ng-click='loadMoreDir({})'>Load More</div>"+
-					"<div ng-show='noMoreLoadMoreItems && queuedItems.length <1' class='ui-lookup-no-more muted'>No More Results!</div>"+
+					"<div ng-hide='trigs.loading || (noMoreLoadMoreItems && queuedItems.length <1) || (scrollLoad && hasScrollbar)' class='ui-lookup-more btn-link' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div class='text-warning' ng-show='trigs.loading && opts.searchText.length >=minSearchLength'>Loading..</div>"+
+					"<div ng-show='!trigs.loading && noMoreLoadMoreItems && queuedItems.length <1 && opts.searchText.length >=minSearchLength' class='ui-lookup-no-more muted'>No More Results!</div>"+
 				"</div>"+
 			"</div>";
 				
@@ -253,6 +260,9 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				watchItemKeys: ['main']
 			};
 			$scope.opts =angular.extend(defaultOpts, $scope.opts);
+			
+			//copy some attributes onto scope for use in html
+			$scope.minSearchLength =$attrs.minSearchLength;
 
 			$scope.trigs ={'loading':false};
 			$scope.items =[];
@@ -411,8 +421,13 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				//$scope.itemsFiltered =$filter('filter')($scope.items, {name:$scope.opts.searchText});
 				var curItem =false;
 				var searchText1 =$scope.opts.searchText.toLowerCase();
-				if(searchText1.length <1) {
-					$scope.itemsFiltered =$scope.items;
+				if(searchText1.length <$attrs.minSearchLength) {
+					if($attrs.minSearchShowAll) {		//show all
+						$scope.itemsFiltered =$scope.items;
+					}
+					else {		//show none
+						$scope.itemsFiltered =[];
+					}
 				}
 				else {		//filter
 					$scope.itemsFiltered =$filter('filter')($scope.items, function(item) {
@@ -468,6 +483,11 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				}
 				//set timeout if don't have full items
 				if($scope.totFilteredItems <$scope.page*$attrs.pageSize) {
+					//show loading
+					$scope.trigs.loading =true;
+					// if(!$scope.$$phase) {
+						// $scope.$apply();
+					// }
 					timeoutInfo.search.trig =$timeout(function() {
 						getMoreItems({});
 					}, timeoutInfo.search.delay);
@@ -540,6 +560,10 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 						getMoreItems({});
 					}
 					else {
+						$scope.trigs.loading =true;
+						// if(!$scope.$$phase) {
+							// $scope.$apply();
+						// }
 						timeoutInfo.search.trig =$timeout(function() {
 							getMoreItems({});
 						}, timeoutInfo.search.delay);
@@ -650,6 +674,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				if(params.partialLoad) {
 					var retQueue =addItemsFromQueue({'partialLoad':true, 'numToAdd':params.numToFillCurPage});
 				}
+				$scope.trigs.loading =false;		//reset
 			}
 			
 			//9.
