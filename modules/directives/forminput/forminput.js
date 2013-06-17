@@ -144,7 +144,8 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			}
 			
 			//validation
-			html.validation ="<div class='ui-forminput-validation text-error' ng-repeat='(key, error) in field.$error' ng-show='error && field.$dirty' class='help-inline'>{{opts1.validationMessages[key]}}</div>";
+			//'track by $id($index)' is required for Angular >= v1.1.4 otherwise will get a 'duplicates in a repeater are not allowed' error; see here for this solution: http://mutablethought.com/2013/04/25/angular-js-ng-repeat-no-longer-allowing-duplicates/
+			html.validation ="<div class='ui-forminput-validation text-error' ng-repeat='(key, error) in field.$error track by $id($index)' ng-show='error && field.$dirty' class='help-inline'>{{opts1.validationMessages[key]}}</div>";
 			
 			var htmlFull ="<div class='ui-forminput-cont'><div class='ui-forminput'>"+html.label+html.input+"</div>"+html.validation+"</div>";
 			element.replaceWith(htmlFull);
