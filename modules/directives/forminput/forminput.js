@@ -115,20 +115,32 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				}
 			});
 			
+			/**
+			setting the name and scope variables can be a little tricky..
+			- First I tried with name='"+attrs.name+"' but that doesn't work inside ng-repeat tags since there's only ONE compile function so ALL inputs have the SAME name (and id), which is no good
+			- So we MUST reset unique attributes (the name/id) in the link function with a NEW (and this time ACTUALLY unique) value so then I used scope with name='{{name}}' and that worked to correctly ensure uniqueness BUT then the validation stopped working since the formCtrl is outdated and only has ONE '{{name}}' key..
+			- So now we're setting BOTH a unique id up top here in the compile function (for the fromCtrl validation to work properly) AND then overwriting it in the link function AND overwriting the formCtrl keys as well.. This is the only way I could get BOTH unique name/id attributes AND get the validation to work (i.e. have formCtrl have the proper keys)..
+			The `elementTag` variable set here is for .find() later in the link function for updating the name attribute on the proper element
+			*/
+			var uniqueName ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
+			var elementTag ='input';
 			if(attrs.type =='text') {
-				html.input ="<input class='ui-forminput-input' name='{{name}}' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='password') {
-				html.input ="<input class='ui-forminput-input' name='{{name}}' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='textarea') {
-				html.input ="<textarea class='ui-forminput-input' name='{{name}}' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+				elementTag ='textarea';
+				html.input ="<textarea class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
 			}
 			else if(attrs.type =='select') {
-				html.input ="<select class='ui-forminput-input' name='{{name}}' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
+				elementTag ='select';
+				html.input ="<select class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
 			}
 			else if(attrs.type =='multi-select') {
-				html.input ="<div class='ui-forminput-input' name='{{name}}' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
+				elementTag ='div';
+				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
 			}
 			
 			//validation
@@ -149,6 +161,9 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				scope.id =attrs.id;
 				scope.name =attrs.name;
 				
+				//update the OLD name with the NEW name
+				element.find(elementTag+'.ui-forminput-input').attr('name', attrs.name);
+				
 				/*
 				//NOT WORKING..
 				//if was in an ng-repeat, they'll all have the same id's so need to re-write the html with new unique id's..
@@ -165,7 +180,13 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				if(attrs.type =='multi-select') {
 					$compile($(element))(scope);
 				}
+				
+				//set up validation
 				if(formCtrl) {
+					//copy over the OLD unique name to the NEW unique name then delete the old one (since at this point, formCtrl is outdated/has bad info since the name of the input has CHANGED)
+					formCtrl[attrs.name] =formCtrl[uniqueName];
+					delete formCtrl[uniqueName];
+					//set the scope.field value equal to the formCtrl input handle for validation to work
 					scope.field =formCtrl[attrs.name];
 				}
 			};

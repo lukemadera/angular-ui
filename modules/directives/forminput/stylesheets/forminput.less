@@ -95,7 +95,14 @@ button[type='submit'], .ui-forminput-submit {
 {
 	/*float:left;*/
 	.flex(1);
+	/*
+	UPDATE: can NOT have left or right margin with width:100%; since box-sizing does NOT apply to margin (just to border and padding)
+	UPDATE2: actually it's still going outside the container on small widths BUT if use display:block; both these issues seem to be fixed.
 	margin:2px (@input-extra-margin*1px);		//give some spacing to reduce chances of input overflowing (i.e. for border-radius rounded corners)
+	margin:2px 0;		//give some spacing to reduce chances of input overflowing (i.e. for border-radius rounded corners) BUT ensure no left/right padding since that could lead to width:100%; inputs overflowing outside it's container!
+	*/
+	margin:2px 0;
+	display:block;		//to ensure the input obeys sizing (flex box, box-sizing, etc.) and stays INSIDE it's container!
 }
 
 .ui-forminput-form.wide button[type='submit'], .ui-forminput-form.wide .ui-forminput-submit, .ui-forminput-form.wide .ui-forminput-validation {
