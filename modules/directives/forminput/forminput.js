@@ -7,9 +7,12 @@ Adds consistent layout (inluding input labels) and styling to an input element s
 This directive is typically NOT meant to be used with just one input by itself or for a group of inputs that do NOT have a lot in common - since the whole point of this directive is to make a GROUP of inputs look the same.
 
 SUPPORTED INPUT TYPES:
-text, password, textarea, select, multiSelect
+text, password, textarea, select, multiSelect, date, datetime
 NOT YET SUPPORTED INPUT TYPES:
 checkbox, multiCheckbox, slider, image?
+
+@dependencies
+- ui-datetimepicker directive (for datetime input type only)
 
 @toc
 1. init
@@ -26,6 +29,15 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Array} [selectOpts] REQUIRED for 'select' type. These are options for the <select>. Each item is an object of:
 		@param {String} val Value of this option. NOTE: this should be a STRING, not a number or int type variable. Values will be coerced to 'string' here but for performance and to ensure accurate display, pass these in as strings (i.e. 1 would become '1'). UPDATE: they may not actually have to be strings but this type coercion ensures the ngModel matches the options since 1 will not match '1' and then the select value won't be set properly. So basically types need to match so just keep everything in strings. Again, ngModel type coercion will be done here but it's best to be safe and just keep everything as strings.
 		@param {String} name text/html to display for this option
+	@param {Object} [optsDatetime] DATE/DATETIME type only. Opts that will be passed through to ui-datetimepicker directive (see there for full documentation)
+		@param {Object} [pikaday] Opts to be used (will extend defaults) for pikaday
+	@param {Function} [validateDatetime] DATE/DATETIME type only. Will be called everytime date changes PRIOR to setting the value of the date. Will pass the following parameters:
+		@param {String} date
+		@param {Object} params
+		@param {Function} callback Expects a return of {Boolean} true if valid, false otherwise. If false, the value will be set to blank.
+	@param {Function} [onchangeDatetime] DATE/DATETIME type only. Will be called everytime date changes. Will pass the following parameters:
+		@param {String} date
+		@param {Object} params
 
 attrs
 	@param {String} [type ='text'] Input type, one of: 'text'
@@ -38,7 +50,7 @@ attrs
 
 EXAMPLE usage:
 partial / html:
-<div ui-forminput opts='opts' ng-model='formVals.title'></div>
+<div ui-forminput ng-model='formVals.title' opts='opts'></div>
 
 controller / js:
 $scope.formVals ={
@@ -66,7 +78,10 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			ngModel:'=',
 			// opts:'=?',		//not supported on stable releases of AngularJS yet (as of 2013.04.30)
 			opts:'=',
-			selectOpts:'='
+			selectOpts:'=',
+			optsDatetime: '=?',
+			validateDatetime: '&?',
+			onchangeDatetime: '&?'
 		},
 		require: '?^form',		//if we are in a form then we can access the formController (necessary for validation to work)
 
@@ -104,7 +119,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			
 			//copy over attributes
 			var customAttrs ='';		//string of attrs to copy over to input
-			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name'];
+			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'optsDatetime', 'validateDatetime', 'onchangeDatetime'];
 			angular.forEach(attrs, function (value, key) {
 				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
 					customAttrs+=attrs.$attr[key];
@@ -142,6 +157,18 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				elementTag ='div';
 				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
 			}
+			else if(attrs.type =='date' || attrs.type =='datetime') {
+				elementTag ='div';
+				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-datetimepicker opts='optsDatetime' ng-model='ngModel'  placeholder='"+placeholder+"' ";
+				if(attrs.validateDatetime) {
+					html.input +="validate='validateDatetime' ";
+				}
+				if(attrs.onchangeDatetime) {
+					html.input +="onchange='onchangeDatetime' ";
+				}
+				html.input+=">";
+				html.input+="</div>";
+			}
 			
 			//validation
 			//'track by $id($index)' is required for Angular >= v1.1.4 otherwise will get a 'duplicates in a repeater are not allowed' error; see here for this solution: http://mutablethought.com/2013/04/25/angular-js-ng-repeat-no-longer-allowing-duplicates/
@@ -178,7 +205,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				}
 				*/
 				
-				if(attrs.type =='multi-select') {
+				if(attrs.type =='multi-select' || attrs.type =='date' || attrs.type =='datetime') {
 					$compile($(element))(scope);
 				}
 				
@@ -221,6 +248,18 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 						$scope.opts.ngChange();
 					}, 50);
 				};
+			}
+			
+			//datetime set default opts
+			if($attrs.type =='date' || $attrs.type =='datetime') {
+				if($scope.optsDatetime ===undefined || !$scope.optsDatetime) {
+					$scope.optsDatetime ={
+						pikaday: {}
+					};
+				}
+				if($attrs.type =='datetime') {
+					$scope.optsDatetime.pikaday.showTime =true;
+				}
 			}
 			
 			
