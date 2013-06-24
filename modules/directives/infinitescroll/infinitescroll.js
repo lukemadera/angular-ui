@@ -1,8 +1,4 @@
 /**
-@todo
-- allow optional scope attrs?? i.e. loadMore isn't really necesssary and the logic handles this but the directive throws an error if they're not defined and unit-testing fails.. so just need to figure out syntax / compiler way to allow this..
-
-
 Uses one array and start / end indices (cursor) to set a combination of DOM elements, javascript data, and backend (AJAX) data to handle paging/infinite scroll loading of content (i.e. a list of objects)
 	- handles paging / loading more when scroll to bottom
 	- can be used with a backend lookup call to load more results (if "loadMore" attr/scope function is passed in)
@@ -16,8 +12,8 @@ Uses one array and start / end indices (cursor) to set a combination of DOM elem
 //1. setItems
 //1.5. setItemsViewCursor
 //2. scrollToMiddle
-//5. 
-//5.5. 
+//5. $scope.$watch('items',..
+//5.5. $scope.$on('uiInfinitescrollReformItems',..
 //6. $scope.loadMoreDir
 //6.5. changePage
 //7. getMoreItems
@@ -25,45 +21,37 @@ Uses one array and start / end indices (cursor) to set a combination of DOM elem
 //9. checkForScrollBar
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
-	REQUIRED
-	@param items {Array} of any initial items to use
-	@param itemsView {Array} of placeholder for final items to display in DOM
-	@param opts {Object}
-		@param cursors {Object} of start and end indices that tell where items are in the scheme of the entire (full) list so can handle loading more to start and/or end. A second object with 
-			@param items {Object}
-				@param start {Number}
-				@param end {Number}
-			@param itemsView {Object}
-				@param current {Number} of what item to start on - this will correspond to the current page and then the start and end will be formed as 1 pageSize forward and 1 pageSize backward
-		@param scrollId {String} of id for element to watch scrolling on (instead of using window/full page scroll bar OR the ui-infinitescroll-content element built in this directive as the default scroll div)
-	@param loadMore =function to call to load more results (this should update $scope.items, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
+	@param {Array} items Initial items to use (if any)
+	@param {Array} itemsView Placeholder for final items to display in DOM
+	@param {Object} opts
+		@param {Object} cursors of start and end indices that tell where items are in the scheme of the entire (full) list so can handle loading more to start and/or end. A second object with 
+			@param {Object} items
+				@param {Number} start
+				@param {Number} end
+			@param {Object} itemsView
+				@param {Number} current of what item to start on - this will correspond to the current page and then the start and end will be formed as 1 pageSize forward and 1 pageSize backward
+		@param {String} scrollId of id for element to watch scrolling on (instead of using window/full page scroll bar OR the ui-infinitescroll-content element built in this directive as the default scroll div)
+		@param {String} [instId] Unique id for this instance of the directive. Used for calling events (i.e. for reInit) to avoid acting on ALL directives.
+	@param {Function} loadMore Function to call to load more results (this should update $scope.items, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
 
 attrs
-	REQUIRED
-	OPTIONAL
-	scrollLoad =1 to do paging via scrolling as opposed to with "load more" button to click to load more. NOTE: if set, this you MUST either set pageScroll to 1 OR pass in a scrollId in opts.scrollId scope variable
-		DEFAULT: 0
-	pageScroll =1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
-		DEFAULT: 0
-	scrollBuffer =int of how much space from top or bottom to start switch the page
-		DEFAULT: 50
-	pageSize =int of how many results to show at a time (will load more in increments of pageSize as scroll down / click "more")
-		DEFAULT: 10
-	loadMorePageSize =int of how many results to load at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
-		DEFAULT: 20
-	noStopLoadMore {Number} 1 to not set noMoreLoadMoreItems prev & next to true if don't have enough results returned from load more
-		DEFAULT: 0
+	@param {Number} [scrollLoad =0] 1 to do paging via scrolling as opposed to with "load more" button to click to load more. NOTE: if set, this you MUST either set pageScroll to 1 OR pass in a scrollId in opts.scrollId scope variable
+	@param {Number} [pageScroll =0] 1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
+	@param {Number} [scrollBuffer =50] How much space from top or bottom to start switching the page
+	@param {Number} [pageSize =10] How many results to show at a time (will load more in increments of pageSize as scroll down / click "more"). NOTE: will show TWO pages at a time - so if want to show 10 TOTAL items, make pageSize be 5.
+	@param {Number} [loadMorePageSize =20] How many results to load at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
+	@param {Number} [noStopLoadMore =0] 1 to not set noMoreLoadMoreItems prev & next to true if don't have enough results returned from load more
 	@param {Number} [negativeLoad=0] 1 to try to load more even if at 0 cursor
 	@param {Number} [animateScroll=0] 1 to animate when moving back to middle after load more from top or bottom
 	@param {Number} [animateScrollDuration=1000] Number of milliseconds for scroll duration
-	@param {Number} [itemHeight=0] Number of pixels for an item (if specified, this will keep the current item in the same spot after loading more - otherwise it will go to the middle after loading)
-	@param {Number} [animateAfterItems=0] Number of items to slow pan through (to indicate to user that something has changed) AFTER jump to middle, etc.
+	@param {Number} [itemHeight=0] Number of pixels for an item (if specified, this will keep the current item in the same spot after loading more - otherwise it will go to the middle after loading). NOTE this means ALL items must be the EXACT same height if you want an exact position match!
+	@param {Number} [animateAfterItems=0] Number of items to slow pan through (to indicate to user that something has changed) AFTER jump to middle, etc. NOTE: this must be less than half of pageSize (if it's not, it will be cut to 1/4 of page size) otherwise it will cause loading of next pages leading to infinite auto scrolling through ALL items!
 	@param {Number} [animateAfterDuration=1000] Milliseconds for how long animation is for the after items animate
 	@param {String} [noMoreResultsText =No More Results!] What to display when have no more items to load (i.e. at very bottom)
 
 
 EXAMPLE usage:
-@example 1 - defaults
+@usage 1 - defaults
 partial / html:
 	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore' opts='scrollOpts'>
 		<!-- custom display code to ng-repeat and display the results (items) goes below -->
@@ -84,16 +72,20 @@ controller / js:
 		itemsMore[ii] ={'_id':(ii+1), 'name':(ii+1)+'. Item #'+(ii+1)};
 	}
 	
-	//@param params
-	//	cursor =int of where to load from
-	//	loadMorePageSize =int of how many to return
+	// @param {Object} params
+		// @param {Number} cursor Where to load from
+		// @param {Number} loadMorePageSize How many to return
+		// @param {String} searchText The string of text that was searched
+	// @param {Function} callback Function to pass the results back to - takes the following arguments:
+		// @param {Array} results The new results to add in
+		// @param {Object} [params]
 	$scope.loadMore =function(params, callback) {
 		var results =itemsMore.slice(params.cursor, (params.cursor+params.loadMorePageSize));
 		callback(results, {});
 	};
 
 	
-@example 2 - page scrolling with negative loading (i.e. starting toward the end of a list then scrolling up to see previous entries)
+@usage 2 - page scrolling with negative loading (i.e. starting toward the end of a list then scrolling up to see previous entries)
 partial / html:
 	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore' opts='scrollOpts' page-size='40' negative-load='1' scroll-load='1' page-scroll='1'>
 		<!-- custom display code to ng-repeat and display the results (items) goes below -->
@@ -117,9 +109,13 @@ controller / js:
 	//var offset =Math.floor(totItems/2);
 	var offset =totItems-100;
 	
-	//@param params
-	//	cursor =int of where to load from
-	//	loadMorePageSize =int of how many to return
+	// @param {Object} params
+		// @param {Number} cursor Where to load from
+		// @param {Number} loadMorePageSize How many to return
+		// @param {String} searchText The string of text that was searched
+	// @param {Function} callback Function to pass the results back to - takes the following arguments:
+		// @param {Array} results The new results to add in
+		// @param {Object} [params]
 	$scope.loadMore =function(params, callback) {
 		var results =itemsMore.slice(offset+params.cursor, (offset+params.cursor+params.loadMorePageSize));
 		callback(results, {});
@@ -135,13 +131,11 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			items: '=',
 			itemsView: '=',
 			opts:'=',
-			//watchItemKeys:'=',		//note: this is not required & will throw an error if not set but it still works? @todo fix this so it's not required & doesn't throw error?
-			loadMore:'&'
-			//cursors: '='
+			loadMore:'&?'
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':75, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!'};
+			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':50, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!'};
 			for(var xx in defaults) {
 				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
@@ -164,6 +158,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			if(attrs.loadMorePageSize <attrs.pageSize) {
 				attrs.loadMorePageSize =attrs.pageSize;
 			}
+			//ensure animateAfterItems is less than pageSize (otherwise will have infinite auto scrolling since the animate will trigger loading the next page!
+			if(attrs.animateAfterItems >=(Math.floor(attrs.pageSize/2))) {
+				attrs.animateAfterItems =Math.floor(attrs.pageSize/4);
+			}
+			// console.log('attrs.animateAfterItems: '+attrs.animateAfterItems);
+			
 			if(attrs.id ===undefined) {
 				attrs.id ="uiInfinitescroll"+Math.random().toString(36).substring(7);
 			}
@@ -177,11 +177,11 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			
 			var html="<div class='ui-infinitescroll'>"+
 				"<div class='ui-infinitescroll-top'>"+
-					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
+					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} negative: {{opts.cursors.negative}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 					"<div ng-hide='(noMoreLoadMoreItems.prev) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
-					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-lookup-no-more'>No More Results!</div>"+
+					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
@@ -197,7 +197,6 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 		
 		controller: function($scope, $element, $attrs) {
 			var defaultsOpts ={
-				//'watchItemKeys':['main'],
 				'cursors':{
 					'items':{
 						'start':0,
@@ -246,7 +245,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					var height1 =eleAng.css('height');
 					var overflow1 =eleAng.css('overflow');
 					if(!height1 || !overflow1) {
-						eleAng.addClass('ui-lookup-content-scroll');
+						eleAng.addClass('ui-infinite-content-scroll');
 					}
 				}
 				
@@ -260,6 +259,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				}
 			};
 			
+			var triggers ={
+				skipWatch: false		//to avoid triggering $watch items reset on load more
+			};
+			
 			//10.
 			//add scroll handle to load more
 			if($attrs.scrollLoad) {
@@ -271,7 +274,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 								//console.log('window onscroll: id: '+$attrs.ids.scrollContent+' element: '+document.getElementById($attrs.ids.scrollContent));
 								$timeout.cancel(timeoutInfo.scrolling.trig);
 								timeoutInfo.scrolling.trig =$timeout(function() {
-									//console.log('uiLookup timeout scrolling loading');
+									//console.log('uiInfinitescroll timeout scrolling loading');
 									var buffer =$attrs.scrollBuffer;
 									var scrollPos =$(window).scrollTop();
 									var scrollHeight =$(document).height();
@@ -367,19 +370,30 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			
 			//0.75.
 			function resetItems(params) {
-				/*
-				@todo
-				$scope.page =1;		//reset
+				//reset cursors
+				$scope.opts.cursors.items.start =0;
+				$scope.opts.cursors.items.end =$scope.items.length;
+				// $scope.opts.cursors.itemsView.start =0;
+				// $scope.opts.cursors.itemsView.end =0;
+				$scope.opts.cursors.itemsView.current =0;
+				$scope.opts.cursors.negative =0;
+				
+				//update / reset triggers
+				$scope.trigs.loading =false;
+				
+				$scope.noMoreLoadMoreItems.prev =false;
+				$scope.noMoreLoadMoreItems.next =false;
+				
+				timeoutInfo.scrolling.trig =false;
+				
+				//update scrolling
 				checkForScrollBar({});
-				$scope.noMoreLoadMoreItems =false;
-				cursors ={
-					//'extra':0,
-				};
-				cursors[$attrs.loadMoreItemsKey] =0;
-				$scope.itemsRaw[$attrs.loadMoreItemsKey].items =[];
-				document.getElementById(scrollId).scrollTop =0;
-				*/
-				var dummy =1;
+				if($attrs.pageScroll) {
+					window.scrollTo(0, 0);
+				}
+				else {
+					document.getElementById(scrollId).scrollTop =0;
+				}
 			}
 			
 			//1.
@@ -559,48 +573,38 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				}
 			}
 			
-			//5.
-			/*
-			//doesn't work - have to watch a sub array piece
-			$scope.$watch('itemsRaw', function(newVal, oldVal) {
-				if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
-					formItems({});
+			/**
+			Watch for updates on items
+			@toc 5.
+			@method $scope.$watch('items',..
+			*/
+			$scope.$watch('items', function(newVal, oldVal) {
+				// console.log('$scope.$watch items');
+				if(!angular.equals(oldVal, newVal) && !triggers.skipWatch) {		//very important to do this for performance reasons since $watch runs all the time
+					// console.log('$scope.$watch items !angular.equals');
+					resetItems({});
+					init({});
 				}
 			});
-			*/
-			if(0) {
-			//@todo ?
-			//for(var xx in $scope.itemsRaw) {
-			for(var ii =0; ii<$scope.opts.watchItemKeys.length; ii++) {
-				xx =$scope.opts.watchItemKeys[ii];
-				//$scope.$watch('itemsRaw', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw['+xx+'].items[0]', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw.extra.items[0]', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw.extra', function(newVal, oldVal) {
-				//$scope.$watch('itemsRaw.'+xx, function(newVal, oldVal) {
-				$scope.$watch('itemsRaw.'+xx+'.items', function(newVal, oldVal) {
-					if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
-						if($scope.totFilteredItems <$scope.page*$attrs.pageSize) {		//if only on first page, reset (otherwise load more button / triggers will be set to false since there's no more in queue / from backend)
-							resetItems({});
-						}
-						formItems({});
-						/*
-						if($scope.queuedItems.length <$attrs.pageSize && $scope.totFilteredItems <$scope.page*$attrs.pageSize) {		//load more externally if don't have enough
-							$scope.loadMoreDir({});
-						}
-						*/
-					}
-				});
-			}
-			}
 			
-			/*
-			//@todo ?
-			//5.5. $watch not firing all the time... @todo figure out & fix this.. (also this will reform ALL instances - should pass in an instance id - which means the directive would have to pass an instance back somehow..)
-			$scope.$on('uiLookupReformItems', function(evt, params) {
-				formItems({});
-			});
+			/**
+			Used in place of updating $scope.items to have the $watch fire if want to update the directive WITHOUT changing the items (i.e. to change types or backend data to load different items but don't have them yet so need the directive to fire to initiate loadMore)
+			@toc 5.5.
+			@param {Object} params
+				@param {String} instId Identifies the directive to update (only that one will be re-initialized)
 			*/
+			$scope.$on('uiInfinitescrollReInit', function(evt, params) {
+				if($scope.opts.instId !==undefined && params.instId !==undefined && $scope.opts.instId ==params.instId) {		//only update if the correct instance
+					//if have items, blank them out; this alone will trigger a reset due to the watch
+					if($scope.items.length >0) {
+						$scope.items =[];
+					}
+					else {
+						resetItems({});
+						init({});
+					}
+				}
+			});
 			
 			//6.
 			/*
@@ -667,6 +671,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					if(params.prev) {
 						ppTemp.prev =true;
 						if(($scope.opts.cursors.items.start >0 || $scope.negativeLoad) && !$scope.noMoreLoadMoreItems.prev) {		//only try to load more if have more left to load
+							triggers.skipWatch =true;		//prevent $watch from resetting items!
 							loadPageSize =$attrs.loadMorePageSize;
 							cursor =$scope.opts.cursors.items.start +$scope.opts.cursors.negative -loadPageSize;
 							$scope.loadMore()({'cursor':cursor, 'loadMorePageSize':loadPageSize, 'searchText':''}, function(results, ppCustom) {
@@ -677,6 +682,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					else {
 						ppTemp.next =true;
 						if(!$scope.noMoreLoadMoreItems.next) {		//only try to load more if have more left to load
+							triggers.skipWatch =true;		//prevent $watch from resetting items!
 							loadPageSize =$attrs.loadMorePageSize;
 							cursor =$scope.opts.cursors.items.end;
 							$scope.loadMore()({'cursor':cursor, 'loadMorePageSize':loadPageSize, 'searchText':''}, function(results, ppCustom) {
@@ -737,6 +743,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						}
 					}
 				}
+				
+				//need to use a timeout otherwise it will be reset BEFORE the $watch fires, making it useless..
+				$timeout(function() {
+					triggers.skipWatch =false;		//reset
+					// console.log('triggers.skipWatch: '+triggers.skipWatch);
+				}, 100);
 			}
 			
 			//9.
