@@ -4,6 +4,9 @@ Uses one array and start / end indices (cursor) to set a combination of DOM elem
 	- can be used with a backend lookup call to load more results (if "loadMore" attr/scope function is passed in)
 		- loadMore function is called when have less than full results among current items stored in javascript, which happens 1 way:
 			1. when scroll to end of page / load more results
+			
+NOTE: for jQuery animate, switched all $(window).animate to $('body, html').animate since was getting errors.. see this post:
+http://stackoverflow.com/questions/10846609/ownerdocument-error-when-using-jquerys-scrolltop-animate-functions
 
 //TOC
 //10. add scroll handle to load more
@@ -463,7 +466,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					if(0) {		//@todo - need a better solution than this.. see below
 					//if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - could probably find a better fix - i.e. also check what the last cursor was at?)
 						if($attrs.animateScroll) {
-							$(window).animate({scrollTop: 0+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+							//$(window).animate({scrollTop: 0+'px'}, $attrs.animateScrollDuration);		//animate the scrolling		//ERRORS
+							$('body, html').animate({scrollTop: 0+'px'}, $attrs.animateScrollDuration);
 						}
 						else {
 							window.scrollTo(0, 0);
@@ -493,7 +497,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						}
 						else {
 							if($attrs.animateScroll) {
-								$(window).animate({scrollTop: middle+'px'}, $attrs.animateScrollDuration);		//animate the scrolling
+								//$(window).animate({scrollTop: middle+'px'}, $attrs.animateScrollDuration);		//animate the scrolling		//ERRORS
+								$('body, html').animate({scrollTop: middle+'px'}, $attrs.animateScrollDuration);
 							}
 							else {
 								window.scrollTo(0, middle);
@@ -506,7 +511,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 								else {
 									newMiddle =middle +$attrs.itemHeight*$attrs.animateAfterItems;
 								}
-								$(window).animate({scrollTop: newMiddle+'px'}, $attrs.animateAfterDuration);		//animate the scrolling
+								//$(window).animate({scrollTop: newMiddle+'px'}, $attrs.animateAfterDuration);		//animate the scrolling		//ERRORS
+								$('body, html').animate({scrollTop: newMiddle+'px'}, $attrs.animateAfterDuration);
 							}
 						}
 					}
