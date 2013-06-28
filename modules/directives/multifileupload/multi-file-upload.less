@@ -1,0 +1,34 @@
+/* ui-multi-file-upload */
+
+.ui-multi-file-upload-progress-bar
+{
+	display:none;
+	margin: 10px 0;
+	padding: 3px;
+	border: 1px solid #000;
+	font-size: 14px;
+	clear: both;
+	opacity: 0;
+}
+.ui-multi-file-upload-progress-bar.loading
+{
+	display:block;
+	opacity:1.0;
+}
+.ui-multi-file-upload-progress-bar.complete
+{
+	.transition(~"opacity 2s linear 1s");
+	opacity:0;
+	display:none;
+}
+.ui-multi-file-upload-progress-bar .percent
+{
+	display:block;
+	background-color: #99ccff;
+	height: auto;
+	width: 0;
+}
+.ui-multi-file-upload-progress-bar-inner
+{
+	background-color:black;
+}
