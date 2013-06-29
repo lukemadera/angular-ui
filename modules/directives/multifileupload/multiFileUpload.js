@@ -63,6 +63,17 @@ angular.module('ui.directives').directive('uiMultiFileUpload', [function () {
 		},
 
 		compile: function(element, attrs) {
+			var defaults ={
+				showProgress:true
+			};
+			var xx;
+			// attrs =angular.extend(defaults, attrs);		//doesn't work.. attrs.id is undefined
+			for(xx in defaults) {
+				if(attrs[xx] ===undefined) {
+					attrs[xx] =defaults[xx];
+				}
+			}
+			
 			if(attrs.id ===undefined) {		//would use scope.opts.instId but don't have access to scope yet..
 				attrs.id ="uiMultiFileUpload"+Math.random().toString(36).substring(7);
 			}

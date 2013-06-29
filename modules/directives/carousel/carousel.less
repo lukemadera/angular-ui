@@ -1,8 +1,16 @@
 /* ui-carousel */
 
+.ui-carousel-cont-outer {
+	//make position absolute to get full height
+	position:absolute;
+	width:100%;
+	top:0;
+	bottom:0;
+}
 .ui-carousel-cont {
 	position:relative;
 	overflow:hidden;
+	height:100%;
 }
 .ui-carousel-content-swipe {
 	position:absolute;
@@ -14,6 +22,7 @@
 .ui-carousel-content {
 	.transition(~"margin-left .5s");
 	.user-select(none);
+	height:100%;
 }
 .ui-carousel-arrow-outer {
 	//@include flex-box-center();		//@todo?

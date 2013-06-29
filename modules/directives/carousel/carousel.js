@@ -1,10 +1,11 @@
 /**
 @todo
-- keep slide position on resize (it jumps to start then jumps to end/current when click nav after that)
 - same-height attr seems to break it (everything is 0 height)?
 - vertical center prev/next arrows (either position absolute negative margin hack or flexbox?)
+- add functionality / support options to bring it to parity with angular-ui carousel
 - remove jQuery dependency (about 5 uses left..)
 - [maybe?] option to automatically make it one slide at a time with overflow hidden, display inline-block, etc. so they just pass in slides and it looks like ui-bootstrap carousel
+	- UPDATE: this is the ONLY way it works now (at least the 1 slide at a time bit) - so may option to NOT do that and allow it to show multiple slides at a time.
 
 NOTE: there's already a ui-bootstrap carousel which is similar; I wrote this one (rather than using / modifying the existing one) because:
 - I'm adding in (hammer) swipe functionality options so need to move the template to the compile function to conditionally build the HTML
@@ -21,12 +22,15 @@ OPTIONAL
 	- http://eightmedia.github.io/hammer.js/
 
 //TOC
-0. init
+0. setup
+	0.5. init
+	0.7. scope.$on(attrs.ids.resizeEvt,..
 1. initMaxSlides function
 2. updateAnimateInfo function
 3. scope.$on('lmContentSliderReInit', ..
 	// broadcast this to update if content changes
 4. scope.nav function
+5. scope.$watch('opts.curSlide',..
 
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
@@ -34,6 +38,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	// @param {Boolean} noTransition Whether to disable transitions on the carousel.
 	// @param {Boolean} noPause Whether to disable pausing on the carousel (by default, the carousel interval pauses on hover)
 	@param {Object} [opts]
+		@param {Number|String} [curSlide =0] Either 0 indexed number of which slide to go to OR string of: 'first', 'last'
 
 attrs
 	@param {String} id Instance id
@@ -51,11 +56,13 @@ attrs
 
 
 @usage
+$scope.opts.curSlide is $watch'ed so can change it to navigate through to a particular slide
+
 partial / html:
 <div ui-carousel hammer-swipe='1' swipe-overlay='1'>
 	<div ng-repeat='slide in slides' style='display:inline-block; text-align:center; vertical-align:top;'>		<!-- styles are optional and should be moved to a class / stylesheet; this centers things and makes them display side by side -->
 		<!-- custom content here -->
-		<img ng-src="{{slide.image}}" style="margin:auto; width:100%;">		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove width:100%; for them to keep their size and be centered -->
+		<img ng-src='{{slide.image}}' style='margin:auto; width:100%;'>		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove width:100%; for them to keep their size and be centered -->
 		<div>
 			<h4>Slide {{$index}}</h4>
 			<p>{{slide.text}}</p>
@@ -89,7 +96,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 		restrict: 'A',
 		transclude: true,
 		scope: {
-			opts: '='
+			opts: '=?'		//make optional and avoid errors with '?'
 		},
 
 		compile: function(element, attrs) {
@@ -129,7 +136,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 				htmlNext ="<div class='ui-carousel-arrow'><div class='ui-carousel-arrow-icon icon-chevron-right'></div></div>";
 			}
 			
-			var html="<div>"+		//MUST have outer div otherwise anything (i.e. the hammer swipe directive) will NOT be compiled since compilation does not happen on the element itself!!
+			var html="<div class='ui-carousel-cont-outer'>"+		//MUST have outer div otherwise anything (i.e. the hammer swipe directive) will NOT be compiled since compilation does not happen on the element itself!!
 				"<div class='ui-carousel-cont' ";
 				if(attrs.hammerSwipe) {
 					html+="hm-swipeleft='nav(\"next\", {})' hm-swiperight='nav(\"prev\", {})' hm-options='{swipe_velocity: 0.2}' ";
@@ -141,7 +148,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 				if(attrs.swipeOverlay) {
 					html+="<div class='ui-carousel-content-swipe'></div>";
 				}
-				html+="<div id='"+attrs.ids.content+"' class='ui-carousel-content' style='width:{{styles.contentWidth}}px;' ng-transclude></div>";
+				html+="<div id='"+attrs.ids.content+"' class='ui-carousel-content' style='width:{{styles.content.width}}px; margin-left:{{styles.content.marginLeft}}px;' ng-transclude></div>";
 				if(attrs.showArrows) {
 					html+="<div ng-show='show.next' class='ui-carousel-next' ng-click='nav(\"next\", {})'><div class='ui-carousel-arrow-outer'>"+htmlNext+"</div></div>";
 				}
@@ -151,16 +158,29 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 			element.replaceWith(html);
 			
 			return function(scope, element, attrs) {
-				//0. init
+				/**
+				setup
+				@toc 0.
+				*/
 				scope.show ={
 					prev: true,
 					next: true
 				};
 				scope.styles ={
-					contentWidth: 0
+					content: {
+						width: 0,
+						marginLeft: 0
+					}
 				};
 				
-				var curSlide =0;
+				var defaultOpts ={
+					curSlide: 0
+				};
+				if(scope.opts ===undefined) {
+					scope.opts ={};
+				}
+				scope.opts =angular.extend(defaultOpts, scope.opts);
+				
 				var maxSlides;
 				var page =0;		//if navNumItems is greater than 1, this will store the current page / set of slides we're on (otherwise page will be the same as curSlide
 				var maxPages;		//this stores total pages (where pages are a collection of slides equal to navNumSlides - typically the amount of slides that are visible at the same time). If navNumItems is 1, this will be the same as maxSlides
@@ -176,23 +196,60 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					alwaysShowNav =attrs.alwaysShowNav;
 				}
 				
+				/**
+				@toc 0.5.
+				@method init
+				*/
 				function init(params) {
 					initMaxSlides({'attempt':1});
 					
 					uiCarouselResize.addCallback(attrs.ids.resizeEvt, {'evtName':attrs.ids.resizeEvt, 'args':[]}, {});
 				}
 				
+				/**
+				@toc 0.7.
+				@method scope.$on(attrs.ids.resizeEvt,..
+				*/
 				scope.$on(attrs.ids.resizeEvt, function(evt, params) {
+					// var delayReInit =1000;
+					var delayReInit =500;
 					//console.log('resize');
-					updateAnimateInfo({});
+					updateAnimateInfo({reNav:true});
 					//call again after timeout just in case content is changing and not done/resized yet..
 					$timeout(function() {
-						updateAnimateInfo({});
-					}, 1000);
+						updateAnimateInfo({reNav:true});
+					}, delayReInit);
 				});
 				
-				//1.
-				/*
+				/**
+				Error checks curSlide to ensure it's valid
+				@toc 0.8.
+				@method checkCurSlide
+				*/
+				function checkCurSlide(params) {
+					if(typeof(scope.opts.curSlide) =='number') {
+						if(scope.opts.curSlide <0) {
+							scope.opts.curSlide =0;
+						}
+						else if(scope.opts.curSlide >=maxSlides) {
+							scope.opts.curSlide =(maxSlides-1);		//-1 since 0 indexed
+						}
+					}
+					else if(typeof(scope.opts.curSlide) =='string') {
+						var allowedStrings =['first', 'last', 'next', 'prev', 'all'];		//hardcoded must match what's used in nav
+						if(allowedStrings.indexOf(scope.opts.curSlide) <0) {
+							scope.opts.curSlide =0;
+						}
+					}
+					else {			//invalid catch-all: set to 0
+						// console.log('uiCarousel invalid curSlide value: '+scope.opts.curSlide);
+						scope.opts.curSlide =0;
+					}
+				}
+				
+				/**
+				@toc 1.
+				@method initMaxSlides
 				@param params
 					attempt =int of which attempt (sometimes have loading/timing issue; so set timeout and try again for an attempt or two to see if get some data..)
 				*/
@@ -212,11 +269,16 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					else {
 						updateAnimateInfo({});
 					
-						scope.nav('first', {});		//init
+						scope.nav(scope.opts.curSlide, {});		//init
 					}
 				}
 				
-				//2.
+				/**
+				@toc 2.
+				@method updateAnimateInfo
+				@param {Object} [params]
+					@param {Boolean} [reNav] True to re-call nav (i.e. for after resize to get back to the correct slide)
+				*/
 				function updateAnimateInfo(params) {
 					var ele =document.getElementById(attrs.ids.content);
 					animateInfo ={
@@ -232,9 +294,11 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					// maxSlides =$(ele).children().length;
 					maxSlides =angular.element(ele).children().length;
 					
-					// scope.styles.contentWidth =animateInfo.totWidth;		//do NOT set it to parent; needs to be full width of ALL slides side by side
-					scope.styles.contentWidth =animateInfo.width*maxSlides;
-					console.log('animateInfo: '+JSON.stringify(animateInfo)+' maxSlides: '+maxSlides);
+					checkCurSlide({});
+					
+					// scope.styles.content.width =animateInfo.totWidth;		//do NOT set it to parent; needs to be full width of ALL slides side by side
+					scope.styles.content.width =animateInfo.width*maxSlides;
+					// console.log('animateInfo: '+JSON.stringify(animateInfo)+' maxSlides: '+maxSlides);
 					
 					//if num slides is calculated dynamically, do it now
 					if(attrs.navNumItems !==undefined && attrs.navNumItems =='width') {
@@ -277,26 +341,31 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 							scope.show.prev =true;
 							scope.show.next =true;
 						}
+						if(params.reNav) {
+							scope.nav(scope.opts.curSlide, {});
+						}
 					}
 				}
 				
-				//3. $scope.$on('lmContentSliderReInit', ..
-				/*
+				/**
+				@toc 3.
+				@method $scope.$on('lmContentSliderReInit', ..
 				@param args
 					nav =mixed; string of 'prev', 'next', 'first', 'last' OR int of slide to go to
 				*/
 				scope.$on('lmContentSliderReInit', function(evt, args) {
 					updateAnimateInfo({});
 					var ppTemp ={};
-					var to =curSlide;
+					var to =scope.opts.curSlide;
 					if(args.nav) {
 						to =args.nav;
 					}
 					scope.nav(to, ppTemp);
 				});
 				
-				//4.
-				/*
+				/**
+				@toc 4.
+				@method scope.nav
 				@param to =mixed; string of 'prev', 'next', 'first', 'last' 'all' (shows all content - this assumes total width is larger than all slides together) OR int of slide to go to
 				*/
 				scope.nav =function(to, params) {
@@ -308,39 +377,52 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					}
 					else {
 						if(to =='prev') {
-							if(curSlide >0) {
-								//curSlide--;
-								curSlide =curSlide -navNumItems;
-								if(curSlide <0) {
-									curSlide =0;
+							if(scope.opts.curSlide >0) {
+								//scope.opts.curSlide--;
+								scope.opts.curSlide =scope.opts.curSlide -navNumItems;
+								if(scope.opts.curSlide <0) {
+									scope.opts.curSlide =0;
 								}
 							}
 						}
 						else if(to =='next') {
-							if(curSlide <(maxSlides-navNumItems)) {
-							//if(curSlide <(maxSlides-1)) {
-								//curSlide++;
-								curSlide =curSlide +navNumItems;
-								if(curSlide >=(maxSlides-1)) {
-									curSlide =(maxSlides-1);
+							if(scope.opts.curSlide <(maxSlides-navNumItems)) {
+							//if(scope.opts.curSlide <(maxSlides-1)) {
+								//scope.opts.curSlide++;
+								scope.opts.curSlide =scope.opts.curSlide +navNumItems;
+								if(scope.opts.curSlide >=(maxSlides-1)) {
+									scope.opts.curSlide =(maxSlides-1);
 								}
 							}
 						}
 						else if(to =='first') {
-							curSlide =0;
+							scope.opts.curSlide =0;
 						}
 						else if(to =='last') {
-							//curSlide =maxSlides-1;
-							curSlide =maxSlides -navNumItems;
+							//scope.opts.curSlide =maxSlides-1;
+							scope.opts.curSlide =maxSlides -navNumItems;
 						}
 						else {		//must be an int of which slide to go to
-							curSlide =to;
+							scope.opts.curSlide =to;
 						}
-						marginLeft =-1*(+curSlide*animateInfo.width) +animateInfo.centerOffset;
+						marginLeft =-1*(+scope.opts.curSlide*animateInfo.width) +animateInfo.centerOffset;
 					}
 					// $(ele).css({'margin-left':marginLeft+'px'});
-					angular.element(ele).css({'margin-left':marginLeft+'px'});
+					scope.styles.content.marginLeft =marginLeft;
+					// angular.element(ele).css({'margin-left':marginLeft+'px'});
 				};
+				
+				/**
+				@toc 5.
+				@method $scope.$watch('opts.curSlide',..
+				*/
+				scope.$watch('opts.curSlide', function(newVal, oldVal) {
+					if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+						// updateAnimateInfo({});
+						checkCurSlide({});
+						scope.nav(scope.opts.curSlide, {});
+					}
+				});
 				
 				init({});
 			};
