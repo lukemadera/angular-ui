@@ -62,7 +62,7 @@ partial / html:
 <div ui-carousel hammer-swipe='1' swipe-overlay='1'>
 	<div ng-repeat='slide in slides' style='display:inline-block; text-align:center; vertical-align:top;'>		<!-- styles are optional and should be moved to a class / stylesheet; this centers things and makes them display side by side -->
 		<!-- custom content here -->
-		<img ng-src='{{slide.image}}' style='margin:auto; width:100%;'>		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove width:100%; for them to keep their size and be centered -->
+		<img ng-src='{{slide.image}}' style='margin:auto; max-width:100%;'>		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove max-width:100%; for them to keep their size and be centered. Make sure NOT to use 'width:100%;' as this will stretch tall, narrow images. -->
 		<div>
 			<h4>Slide {{$index}}</h4>
 			<p>{{slide.text}}</p>
