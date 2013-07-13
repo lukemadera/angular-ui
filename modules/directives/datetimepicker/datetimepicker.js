@@ -77,6 +77,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 	moment.js apparently does not yet have a function / way to convert a date to a different timezone (other than 'local' and 'UTC'). As of 2013.06.21, see here:
 	http://stackoverflow.com/questions/15347589/moment-js-format-date-in-a-specific-timezone (this says it can be done but it's not working for me - maybe it's only on non-stable branches of the code..)
 	https://github.com/timrwood/moment/issues/482
+	UPDATE: as of 2013.07.10 / moment v2.1 there IS timezone support but it's much bigger than this simple function here so sticking with this to avoid code bloat.
 	
 	@param {Object} dateMoment moment.js date object
 	@param {Number} [tzFromMinutes] Timezone minutes offset from UTC to be converted FROM. If not supplied, the timezone offset will be pulled from the dateMoment object. I.e. 420 for -07:00 (Pacific Time)
@@ -110,11 +111,15 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 		
 		//manually add timezone offset
 		var dateFormatted =dateMoment.format('YYYY-MM-DD HH:mm:ss');		//temporary string that will be used to form the final moment date object AFTER timezone conversion is done (since doesn't seem to be a way to change the timezone on an existing moment date object.. - if there was, we wouldn't need this entire function at all!)
-		var hrOffset =Math.floor(tzToMinutes /60).toString();
+		var tzToMinutesAbsVal =tzToMinutes;
+		if(tzToMinutesAbsVal <0) {
+			tzToMinutesAbsVal =tzToMinutesAbsVal *-1;
+		}
+		var hrOffset =Math.floor(tzToMinutesAbsVal /60).toString();
 		if(hrOffset.length ==1) {
 			hrOffset ='0'+hrOffset;
 		}
-		var minutesOffset =(tzToMinutes %60).toString();
+		var minutesOffset =(tzToMinutesAbsVal %60).toString();
 		if(minutesOffset.length ==1) {
 			minutesOffset ='0'+minutesOffset;
 		}
