@@ -7,9 +7,9 @@ Adds consistent layout (inluding input labels) and styling to an input element s
 This directive is typically NOT meant to be used with just one input by itself or for a group of inputs that do NOT have a lot in common - since the whole point of this directive is to make a GROUP of inputs look the same.
 
 SUPPORTED INPUT TYPES:
-text, password, textarea, select, multiSelect, date, datetime
+text, password, textarea, select, multiSelect, date, datetime, email, tel, number, url
 NOT YET SUPPORTED INPUT TYPES:
-checkbox, multiCheckbox, slider, image?
+checkbox, multiCheckbox, slider, file/image?, datetime-local??, time?
 
 @dependencies
 - ui-datetimepicker directive (for datetime input type only)
@@ -26,7 +26,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Object} opts
 		@param {Function} [ngChange] Will be called AFTER the value is updated
 		@param {Object} [validationMessages] Key-value pairs of validation messages to display (i.e. {minlength: 'Too short!'} )
-	@param {Array} [selectOpts] REQUIRED for 'select' type. These are options for the <select>. Each item is an object of:
+	@param {Array} [selectOpts] REQUIRED for 'select' and 'multiSelect' type. These are options for the <select>. Each item is an object of:
 		@param {String} val Value of this option. NOTE: this should be a STRING, not a number or int type variable. Values will be coerced to 'string' here but for performance and to ensure accurate display, pass these in as strings (i.e. 1 would become '1'). UPDATE: they may not actually have to be strings but this type coercion ensures the ngModel matches the options since 1 will not match '1' and then the select value won't be set properly. So basically types need to match so just keep everything in strings. Again, ngModel type coercion will be done here but it's best to be safe and just keep everything as strings.
 		@param {String} name text/html to display for this option
 	@param {Object} [optsDatetime] DATE/DATETIME type only. Opts that will be passed through to ui-datetimepicker directive (see there for full documentation)
@@ -48,9 +48,10 @@ attrs
 	@param {Number} [noLabel] Set to 1 to not show label
 	
 
-EXAMPLE usage:
+@usage
+//1. text/default input (or password, textarea, email, tel, number, url - just change 'type' appropriately)
 partial / html:
-<div ui-forminput ng-model='formVals.title' opts='opts'></div>
+<div ui-forminput type='text' ng-model='formVals.title' opts='opts'></div>
 
 controller / js:
 $scope.formVals ={
@@ -64,7 +65,37 @@ $scope.searchTasks =function() {
 	//do something
 };
 
-//end: EXAMPLE usage
+
+
+//2. select, multiSelect
+partial / html:
+<div ui-forminput type='multi-select' ng-model='formVals.tags' select-opts='selectOptsTags' opts=''></div>
+
+controller / js:
+$scope.formVals ={
+	tags: ''
+};
+
+$scope.selectOptsTags =[
+	{val: '1', name: 'one'},
+	{val: 'yes', name: 'Yes'},
+	{val: '83lksdf', name: 'John Smith'}
+];
+
+
+
+//3. date, datetime
+partial / html:
+<div ui-forminput type='datetime' ng-model='formVals.due_date' opts=''></div>
+
+controller / js:
+$scope.formVals ={
+	due_date: ''
+};
+
+
+
+//end: usage
 */
 angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile', '$http', '$timeout', function (uiConfig, $compile, $http, $timeout) {
   return {
@@ -76,8 +107,8 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 		//terminal: true,		//can NOT be set otherwise ngModel value will be blank / not accurrate		//we need this AND priority - otherwise the form will not be $valid on submit
 		scope: {
 			ngModel:'=',
-			// opts:'=?',		//not supported on stable releases of AngularJS yet (as of 2013.04.30)
-			opts:'=',
+			opts:'=?',		//supported on v1.1 versions (but not on stable releases of AngularJS yet (as of 2013.04.30))
+			// opts:'=',
 			selectOpts:'=',
 			optsDatetime: '=?',
 			validateDatetime: '&?',
@@ -139,8 +170,8 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			*/
 			var uniqueName ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
 			var elementTag ='input';
-			if(attrs.type =='text') {
-				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='text' placeholder='"+placeholder+"' "+customAttrs+" />";
+			if(attrs.type =='text' || attrs.type =='email' || attrs.type =='tel' || attrs.type =='number' || attrs.type =='url') {
+				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='"+attrs.type+"' placeholder='"+placeholder+"' "+customAttrs+" />";
 			}
 			else if(attrs.type =='password') {
 				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
