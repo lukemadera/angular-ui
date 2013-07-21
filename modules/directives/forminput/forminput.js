@@ -7,9 +7,17 @@ Adds consistent layout (inluding input labels) and styling to an input element s
 This directive is typically NOT meant to be used with just one input by itself or for a group of inputs that do NOT have a lot in common - since the whole point of this directive is to make a GROUP of inputs look the same.
 
 SUPPORTED INPUT TYPES:
-text, password, textarea, select, multiSelect, date, datetime, email, tel, number, url
+text, email, tel, number, url,
+password,
+textarea,
+select, multiSelect,
+date, datetime,
+checkbox
 NOT YET SUPPORTED INPUT TYPES:
-checkbox, multiCheckbox, slider, file/image?, datetime-local??, time?
+multiCheckbox,
+slider,
+file/image?,
+datetime-local??, time?
 
 @dependencies
 - ui-datetimepicker directive (for datetime input type only)
@@ -29,6 +37,9 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Array} [selectOpts] REQUIRED for 'select' and 'multiSelect' type. These are options for the <select>. Each item is an object of:
 		@param {String} val Value of this option. NOTE: this should be a STRING, not a number or int type variable. Values will be coerced to 'string' here but for performance and to ensure accurate display, pass these in as strings (i.e. 1 would become '1'). UPDATE: they may not actually have to be strings but this type coercion ensures the ngModel matches the options since 1 will not match '1' and then the select value won't be set properly. So basically types need to match so just keep everything in strings. Again, ngModel type coercion will be done here but it's best to be safe and just keep everything as strings.
 		@param {String} name text/html to display for this option
+	// @param {Object} [checkboxVals] CHECKBOX type only. True and false values:
+		// @param {String} [ngTrueValue =1] The value the ngModel will be equal to if the checkbox is checked
+		// @param {String} [ngFalseValue =0] The value the ngModel will be if the checkbox is NOT checked
 	@param {Object} [optsDatetime] DATE/DATETIME type only. Opts that will be passed through to ui-datetimepicker directive (see there for full documentation)
 		@param {Object} [pikaday] Opts to be used (will extend defaults) for pikaday
 	@param {Function} [validateDatetime] DATE/DATETIME type only. Will be called everytime date changes PRIOR to setting the value of the date. Will pass the following parameters:
@@ -95,6 +106,18 @@ $scope.formVals ={
 
 
 
+//4. checkbox
+partial / html:
+<div ui-forminput type='checkbox' ng-model='formVals.checkVal' ng-true-value='yes' ng-false-value='off' opts=''></div>
+
+controller / js:
+$scope.formVals ={
+	checkVal: 'yes'
+};
+
+
+
+
 //end: usage
 */
 angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile', '$http', '$timeout', function (uiConfig, $compile, $http, $timeout) {
@@ -111,6 +134,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			// opts:'=',
 			selectOpts:'=',
 			optsDatetime: '=?',
+			// checkboxVals: '=?',
 			validateDatetime: '&?',
 			onchangeDatetime: '&?'
 		},
@@ -150,7 +174,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			
 			//copy over attributes
 			var customAttrs ='';		//string of attrs to copy over to input
-			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'optsDatetime', 'validateDatetime', 'onchangeDatetime'];
+			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'optsDatetime', 'validateDatetime', 'onchangeDatetime', 'checkboxVals'];
 			angular.forEach(attrs, function (value, key) {
 				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
 					customAttrs+=attrs.$attr[key];
@@ -179,6 +203,12 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			else if(attrs.type =='textarea') {
 				elementTag ='textarea';
 				html.input ="<textarea class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+			}
+			else if(attrs.type =='checkbox') {
+				// html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" />";
+				//doesn't work - apparently can't set ng-true-value and ng-false-value via scope...
+				// html.input ="<div class='ui-forminput-input ui-forminput-input-checkbox-cont'><input class='ui-forminput-input-checkbox' name='"+uniqueName+"' ng-model='ngModel' ng-true-value='{{checkboxVals.ngTrueValue}}' ng-false-value='{{checkboxVals.ngFalseValue}}' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" /></div>";
+				html.input ="<div class='ui-forminput-input ui-forminput-input-checkbox-cont'><input class='ui-forminput-input-checkbox' name='"+uniqueName+"' ng-model='ngModel' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" /></div>";
 			}
 			else if(attrs.type =='select') {
 				elementTag ='select';
@@ -238,6 +268,21 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 				
 				if(attrs.type =='multi-select' || attrs.type =='date' || attrs.type =='datetime') {
 					$compile($(element))(scope);
+				}
+				
+				if(attrs.type =='checkbox') {
+					/*
+					//doesn't work - apparently can't set ng-true-value and ng-false-value via scope... 
+					var defaultCheckboxVals ={
+						ngTrueValue: '1',
+						ngFalseValue: '0'
+					};
+					scope.checkboxVals =angular.extend(defaultCheckboxVals, scope.checkboxVals);
+					*/
+					//force to string (otherwise won't match properly and won't start checked even if ngModel equals the integer value of the ng-true-value)
+					if(scope.ngModel !==undefined) {
+						scope.ngModel =scope.ngModel.toString();
+					}
 				}
 				
 				//set up validation
