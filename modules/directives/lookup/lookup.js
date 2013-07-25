@@ -13,6 +13,7 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 //1. formItems
 //2. $scope.filterItems
 //3. $scope.clickInput
+//3.5. $scope.clearInput
 //4. $scope.changeInput
 //5. $scope.$watch('itemsRaw',..
 //6. $scope.loadMoreDir
@@ -227,6 +228,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				"<div class='ui-lookup-top'>"+
 					"<div class='ui-lookup-input-div "+attrs.classInputCont+"'>"+
 						"<input type='text' ng-change='changeInput({})' placeholder='"+attrs.placeholder+"' class='ui-lookup-input "+attrs.classInput+"' ng-model='opts.searchText' ng-click='clickInput({})' />"+
+						"<div class='ui-lookup-input-x' ng-click='clearInput({})'>X</div>"+
 					"</div>"+
 					//"<div>page: {{page}} totFilteredItems: {{totFilteredItems}} queuedItems: {{queuedItems.length}}</div>"+		//TESTING
 					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
@@ -470,6 +472,15 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			//3.
 			$scope.clickInput =function(params) {
 				$scope.filterItems({});
+			};
+			
+			/**
+			@toc 3.5.
+			@method $scope.clearInput
+			*/
+			$scope.clearInput =function(params) {
+				$scope.opts.searchText ='';
+				$scope.changeInput({});
 			};
 			
 			//4.
