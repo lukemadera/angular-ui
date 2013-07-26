@@ -16,6 +16,8 @@ Uses one associative array (raw data) to build a concatenated scalar (final/disp
 //3.5. $scope.clearInput
 //4. $scope.changeInput
 //5. $scope.$watch('itemsRaw',..
+//5.1. $scope.$watch('opts.searchText',..
+//5.5. $scope.$on('uiLookupReformItems',..
 //6. $scope.loadMoreDir
 //7. getMoreItems
 //8. addLoadMoreItems
@@ -266,7 +268,9 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 			//copy some attributes onto scope for use in html
 			$scope.minSearchLength =$attrs.minSearchLength;
 
-			$scope.trigs ={'loading':false};
+			$scope.trigs ={'loading':false,
+				skipWatch: false		//used for skipping $watch updating/resetting when load more items (i.e. 'extra' key)
+			};
 			$scope.items =[];
 			$scope.page =1;		//will store what page (broken up by pageSize attr) we're on
 			$scope.totFilteredItems =0;
@@ -523,7 +527,7 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				//$scope.$watch('itemsRaw.extra', function(newVal, oldVal) {
 				//$scope.$watch('itemsRaw.'+xx, function(newVal, oldVal) {
 				$scope.$watch('itemsRaw.'+xx+'.items', function(newVal, oldVal) {
-					if(!angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
+					if(!$scope.trigs.skipWatch && !angular.equals(oldVal, newVal)) {		//very important to do this for performance reasons since $watch runs all the time
 						if($scope.totFilteredItems <$scope.page*$attrs.pageSize) {		//if only on first page, reset (otherwise load more button / triggers will be set to false since there's no more in queue / from backend)
 							resetItems({});
 						}
@@ -537,10 +541,18 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 				});
 			}
 			
+			//5.1.
+			$scope.$watch('opts.searchText', function(newVal, oldVal) {
+				if(!angular.equals(oldVal, newVal)) {
+					$scope.changeInput({});
+				}
+			});
+			
 			//5.5. $watch not firing all the time... @todo figure out & fix this.. (also this will reform ALL instances - should pass in an instance id - which means the directive would have to pass an instance back somehow..)
 			$scope.$on('uiLookupReformItems', function(evt, params) {
 				formItems({});
 			});
+
 			
 			//6.
 			/*
@@ -648,8 +660,12 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 						numFromQueue =$scope.queuedItems.length;
 					}
 					retArray.numItemsAdded =numFromQueue;
+					$scope.trigs.skipWatch =true;		//skip watch on this itemsRaw update
 					//add to itemsRaw then update filtered items
 					$scope.itemsRaw[$attrs.loadMoreItemsKey].items =$scope.itemsRaw[$attrs.loadMoreItemsKey].items.concat($scope.queuedItems.slice(0, numFromQueue));
+					$timeout(function() {
+						$scope.trigs.skipWatch =false;		//reset
+					}, 250);
 					if(params.partialLoad ===undefined || !params.partialLoad || numFromQueue ==$attrs.pageSize) {		//partial load can be set if need to load a new page so may still need to increment page if loading same number of items as page size
 						$scope.page++;
 						//checkForScrollBar({});
