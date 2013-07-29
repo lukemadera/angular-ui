@@ -1,5 +1,6 @@
 /**
 @todo
+- checkbox - allow true/false values to be specified in scope (rather than just attrs)
 - add specific input type directives to be included here (checkbox, etc.)
 - add more/customized validation
 
