@@ -32,6 +32,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Object} params
 @param {Object} opts
 	@param {Object} pikaday Opts to be used (will extend defaults) for pikaday
+	@param {String} [id] Will over-write attrs.id value if set (used for the input id)
 
 attrs
 @param {String} [placeholder ='Choose a date/time'] Placeholder text for input
@@ -174,7 +175,10 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 			
 			return function(scope, element, attrs) {
 				//if was in an ng-repeat, they'll have have the same compile function so have to set the id here, NOT in the compile function (otherwise they'd all be the same..)
-				if(attrs.id ===undefined) {
+				if(scope.opts.id !==undefined) {
+					attrs.id =scope.opts.id;
+				}
+				else if(attrs.id ===undefined) {
 					attrs.id ="uiDatetimepicker"+Math.random().toString(36).substring(7);
 				}
 				//update the OLD name with the NEW name
