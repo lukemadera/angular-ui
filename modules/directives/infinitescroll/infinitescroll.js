@@ -16,7 +16,8 @@ http://stackoverflow.com/questions/10846609/ownerdocument-error-when-using-jquer
 //1.5. setItemsViewCursor
 //2. scrollToMiddle
 //5. $scope.$watch('items',..
-//5.5. $scope.$on('uiInfinitescrollReformItems',..
+//5.5. $scope.$on('uiInfinitescrollReInit',..
+//5.6. $scope.$on('uiInfinitescrollLoadMore',..
 //6. $scope.loadMoreDir
 //6.5. changePage
 //7. getMoreItems
@@ -54,6 +55,10 @@ attrs
 
 
 EXAMPLE usage:
+Events:
+$scope.$broadcast('uiInfinitescrollReInit', {'instId':$scope.opts.instId});
+$scope.$broadcast('uiInfinitescrollLoadMore', {'instId':$scope.opts.instId, 'type':'prev'});
+
 @usage 1 - defaults
 partial / html:
 	<div ui-infinitescroll items='usersList' items-view='users' load-more='loadMore' opts='scrollOpts'>
@@ -612,12 +617,31 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				}
 			});
 			
+			/**
+			Used to programmatically load more (prev or next)
+			@toc 5.6.
+			@param {Object} params
+				@param {String} instId Identifies the directive to update (only that one will be re-initialized)
+				@param {String} type One of 'prev' or 'next'
+			*/
+			$scope.$on('uiInfinitescrollLoadMore', function(evt, params) {
+				if($scope.opts.instId !==undefined && params.instId !==undefined && $scope.opts.instId ==params.instId) {		//only update if the correct instance
+					var params1 ={};
+					if(params.type !==undefined && params.type =='prev') {
+						params1.prev =true;
+					}
+					$scope.loadMoreDir(params1);
+				}
+			});
+			
 			//6.
 			/*
 			Starts the load more process - checks if need to load more (may already have more items in the existing javascript items array, in which case can just load more internally) and IF need to load more external items, sets a timeout to do so (for performance to avoid rapid firing external calls)
 				This is paired with the getMoreItems function below - which handles actually getting the items AFTER the timeout
 			@param params
-				noDelay =boolean true to skip the timeout before loading more (i.e. if coming from scroll, in which case already have waited)
+				@param {Boolean} [noDelay] True to skip the timeout before loading more (i.e. if coming from scroll, in which case already have waited)
+				@param {Boolean} [next]
+				@param {Boolean} [prev]
 			*/
 			$scope.loadMoreDir =function(params) {
 				var getMoreItemsTrig =false;
