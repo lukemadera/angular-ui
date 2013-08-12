@@ -90,12 +90,12 @@ controller / js:
 				{'_id':'d4', 'name':'ron artest'},
 				{'_id':'d5', 'name':'kobe bryant'},
 				{'_id':'d6', 'name':'steve balls'},
-			],
+			]
 		},
 		'extra':{
 			'items':[
-			],
-		},
+			]
+		}
 	};
 	
 	//handle load more (callbacks)
