@@ -434,6 +434,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			Updates viewable (DOM) items (sets the range)
 			@toc 1.
 			@param params
+				@param {Number} [cursorViewStart] If set, will over-ride page and just go to this item. cursor view end will be set to this plus 1 page size
 			*/
 			function setItems(params) {
 				// console.log('uiInfinitescroll setItems');		//TESTING
@@ -448,9 +449,22 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							'end':$scope.opts.cursors.itemsView.end
 						};
 					}
-					$scope.opts.cursors.itemsView.end =$scope.page*$attrs.pageSize +$attrs.pageSize;
-					setItemsViewCursor({});
+					
+					if(params.cursorViewStart !==undefined) {
+						$scope.opts.cursors.itemsView.start =params.cursorViewStart;
+						$scope.opts.cursors.itemsView.end =$scope.opts.cursors.itemsView.start +$attrs.pageSize;
+						if($scope.opts.cursors.itemsView.end >$scope.items.length) {
+							$scope.opts.cursors.itemsView.end =$scope.items.length;
+						}
+						//make sure to set page appropriately so next scroll/load works
+						$scope.page =Math.ceil($scope.opts.cursors.itemsView.start /$attrs.pageSize);
+					}
+					else {
+						$scope.opts.cursors.itemsView.end =$scope.page*$attrs.pageSize +$attrs.pageSize;
+						setItemsViewCursor({});
+					}
 					$scope.itemsView =$scope.items.slice($scope.opts.cursors.itemsView.start, $scope.opts.cursors.itemsView.end);
+					// console.log('$scope.opts.cursors.itemsView.start: '+$scope.opts.cursors.itemsView.start+' $scope.page: '+$scope.page);		//TESTING
 					
 					if($attrs.itemHeight) {
 						if(params.prev) {
@@ -783,6 +797,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			@toc 8.
 			@param results =array [] of items (will be appended to queue)
 			@param ppCustom =params returned from callback
+				@param {Number} [numPrevItems] Number of previous items that are mixed in (so can update cursor appropriately) - this is typically for a first load where may want to load some previous items as well as next items
 			@param params
 				prev {Boolean}
 				next {Boolean}
@@ -800,13 +815,27 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							$scope.opts.cursors.items.end += ($scope.opts.cursors.items.start *-1);		//have to push up items.end the same amount we're removing from items.start
 							$scope.opts.cursors.items.start =0;
 						}
+						changePage(params);
 					}
 					else {
 						$scope.items =$scope.items.concat(results);
 						$scope.opts.cursors.items.end +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
+						if(ppCustom.numPrevItems !==undefined) {
+							$scope.opts.cursors.negative -=ppCustom.numPrevItems;
+							//shift page number up accordingly since added items to beginning
+							// console.log('$scope.page before: '+$scope.page);
+							// $scope.page +=Math.ceil(ppCustom.numPrevItems /$attrs.pageSize);
+							// console.log('$scope.page after: '+$scope.page);
+							
+							var ppSend ={
+								cursorViewStart: ppCustom.numPrevItems
+							};
+							setItems(ppSend);		//go to specific item
+						}
+						else {
+							changePage(params);
+						}
 					}
-					
-					changePage(params);
 				}
 				else {
 					if( (params.prev && $scope.opts.cursors.items.start < $scope.opts.cursors.itemsView.start) || (params.next && $scope.opts.cursors.items.end > $scope.opts.cursors.itemsView.end)) {		//display last ones from javascript
