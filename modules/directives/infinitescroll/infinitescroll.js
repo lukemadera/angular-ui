@@ -820,7 +820,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					else {
 						$scope.items =$scope.items.concat(results);
 						$scope.opts.cursors.items.end +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
-						if(ppCustom.numPrevItems !==undefined) {
+						if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined) {
 							$scope.opts.cursors.negative -=ppCustom.numPrevItems;
 							//shift page number up accordingly since added items to beginning
 							// console.log('$scope.page before: '+$scope.page);
