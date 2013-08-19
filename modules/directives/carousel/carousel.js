@@ -58,6 +58,53 @@ attrs
 @usage
 $scope.opts.curSlide is $watch'ed so can change it to navigate through to a particular slide
 
+//1. default / no extra options
+partial / html:
+<div ui-carousel>
+	<div ng-repeat='slide in slides' style='display:inline-block; text-align:center; vertical-align:top;'>		<!-- styles are optional and should be moved to a class / stylesheet; this centers things and makes them display side by side -->
+		<!-- custom content here -->
+		<img ng-src='{{slide.image}}' style='margin:auto; max-width:100%;'>		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove max-width:100%; for them to keep their size and be centered. Make sure NOT to use 'width:100%;' as this will stretch tall, narrow images. -->
+		<div>
+			<h4>Slide {{$index}}</h4>
+			<p>{{slide.text}}</p>
+		</div>
+		<!-- end: custom content here -->
+	</div>
+</div>
+
+controller / js:
+$scope.slides =[
+	{
+		image: 'http://placekitten.com/200/200',
+		text: 'cat 1'
+	},
+	{
+		image: 'http://placekitten.com/210/200',
+		text: 'cat 2'
+	},
+	{
+		image: 'http://placekitten.com/200/215',
+		text: 'cat 3'
+	}
+];
+
+// $scope.myInterval = 5000;
+var slides = $scope.slides = [];
+$scope.addSlide = function() {
+	var newWidth = 200 + ((slides.length + (25 * slides.length)) % 150);
+	slides.push({
+		image: 'http://placekitten.com/' + newWidth + '/200',
+		text: ['More','Extra','Lots of','Surplus'][slides.length % 4] + ' ' +
+		['Cats', 'Kittys', 'Felines', 'Cutes'][slides.length % 4]
+	});
+};
+for (var i=0; i<4; i++) {
+	$scope.addSlide();
+}
+
+
+
+//2. (hammer) swipe
 partial / html:
 <div ui-carousel hammer-swipe='1' swipe-overlay='1'>
 	<div ng-repeat='slide in slides' style='display:inline-block; text-align:center; vertical-align:top;'>		<!-- styles are optional and should be moved to a class / stylesheet; this centers things and makes them display side by side -->
