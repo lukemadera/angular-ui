@@ -3,6 +3,7 @@
 - same-height attr seems to break it (everything is 0 height)?
 - vertical center prev/next arrows (either position absolute negative margin hack or flexbox?)
 - add functionality / support options to bring it to parity with angular-ui carousel
+	- timing/intervals, etc.
 - remove jQuery dependency (about 5 uses left..)
 - [maybe?] option to automatically make it one slide at a time with overflow hidden, display inline-block, etc. so they just pass in slides and it looks like ui-bootstrap carousel
 	- UPDATE: this is the ONLY way it works now (at least the 1 slide at a time bit) - so may option to NOT do that and allow it to show multiple slides at a time.
@@ -106,7 +107,7 @@ for (var i=0; i<4; i++) {
 
 //2. (hammer) swipe
 partial / html:
-<div ui-carousel hammer-swipe='1' swipe-overlay='1'>
+<div ui-carousel hammer-swipe='1' swipe-overlay='1' opts='opts'>
 	<div ng-repeat='slide in slides' style='display:inline-block; text-align:center; vertical-align:top;'>		<!-- styles are optional and should be moved to a class / stylesheet; this centers things and makes them display side by side -->
 		<!-- custom content here -->
 		<img ng-src='{{slide.image}}' style='margin:auto; max-width:100%;'>		<!-- styles are optional and should be moved to a class / stylehseet; this makes the content/images dynamic full width. Remove max-width:100%; for them to keep their size and be centered. Make sure NOT to use 'width:100%;' as this will stretch tall, narrow images. -->
@@ -119,6 +120,10 @@ partial / html:
 </div>
 
 controller / js:
+$scope.opts ={
+	curSlide: 0
+};
+
 // $scope.myInterval = 5000;
 var slides = $scope.slides = [];
 $scope.addSlide = function() {
