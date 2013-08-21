@@ -431,8 +431,10 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 					if($attrs.minSearchShowAll) {		//show all
 						$scope.itemsFiltered =$scope.items;
 					}
-					else {		//show none
+					else {		//show none & reset
 						$scope.itemsFiltered =[];
+						resetItems({});
+						$scope.noMoreLoadMoreItems =true;		//hide loading
 					}
 				}
 				else {		//filter
