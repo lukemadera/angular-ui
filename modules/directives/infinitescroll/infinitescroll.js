@@ -23,6 +23,7 @@ Scrolling functions (different ways to scroll the page / div/element)
 2.1. scrollAnimate
 5. $scope.$watch('items',..
 5.5. $scope.$on('uiInfinitescrollReInit',..
+5.55. $scope.$on('uiInfinitescrollRefresh',..
 5.6. $scope.$on('uiInfinitescrollLoadMore',..
 6. $scope.loadMoreDir
 6.5. changePage
@@ -699,6 +700,19 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						resetItems({});
 						init({});
 					}
+				}
+			});
+			
+			/**
+			Used in place of updating $scope.items to have the $watch fire in case it's during a triggers.skipWatch. This is different than uiInfinitescrollReInit in that it will NOT blank out / reset $scope.items.
+			@toc 5.55.
+			@param {Object} params
+				@param {String} instId Identifies the directive to update (only that one will be re-initialized)
+			*/
+			$scope.$on('uiInfinitescrollRefresh', function(evt, params) {
+				if($scope.opts.instId !==undefined && params.instId !==undefined && $scope.opts.instId ==params.instId) {		//only update if the correct instance
+					resetItems({});
+					init({});
 				}
 			});
 			
