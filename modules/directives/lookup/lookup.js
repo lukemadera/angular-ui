@@ -631,6 +631,10 @@ angular.module('ui.directives').directive('uiLookup', ['ui.config', '$filter', '
 						}
 					}
 				}
+				else {		//just reset and remove load more button
+					$scope.noMoreLoadMoreItems =true;
+					$scope.trigs.loading =false;		//reset
+				}
 			}
 			
 			//7.5.

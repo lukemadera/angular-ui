@@ -161,7 +161,11 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				attrs.placeholder ='Choose a date/time';
 			}
 			
-			var html ="<div>";
+			var class1 ='';
+			if(attrs.class) {
+				class1+=attrs.class;
+			}
+			var html ="<div class='"+class1+"'>";
 				if(type =='pikaday') {
 					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' />";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value
 					// html+="<br />{{ngModel}}";
@@ -260,8 +264,13 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 					
 					//set initial value
 					if(scope.ngModel) {
-						var dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
-						var timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+						var dateOnly =scope.ngModel;
+						var timeOnly ='';
+						if(scope.ngModel.indexOf(' ') >-1) {
+							dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
+							timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+						}
+
 						// picker.setDate(dateOnly);		//this will mess up due to timezone offset
 						picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
 						// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
