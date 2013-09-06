@@ -16,6 +16,8 @@ NOTE: I added in a "setTimeMoment" function to the forked file so it's now using
 - moment.js
 
 //TOC
+4. setModelVal
+4.5. scope.$on('uiDatetimepickerUpdateVal',..
 1.5. scope.onSelectDate
 1. onSelectDate
 2. updateModel
@@ -33,6 +35,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 @param {Object} opts
 	@param {Object} pikaday Opts to be used (will extend defaults) for pikaday
 	@param {String} [id] Will over-write attrs.id value if set (used for the input id)
+@param {Function} ngClick Declared on scope so it can be 'passed through' from parent controller; just use as normal ng-click
 
 attrs
 @param {String} [placeholder ='Choose a date/time'] Placeholder text for input
@@ -146,7 +149,8 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 			ngModel: '=',
 			validate: '&',
 			onchange: '&',
-			opts: '='
+			opts: '=',
+			ngClick: '&?'
 		},
 
 		// template: "<input type='datetime' />",
@@ -165,13 +169,35 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 			if(attrs.class) {
 				class1+=attrs.class;
 			}
+			
+			//copy over attributes
+			var customAttrs ='';		//string of attrs to copy over to input
+			var skipAttrs =['uiDatetimepicker', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'validate', 'onchange', 'ngClick'];
+			angular.forEach(attrs, function (value, key) {
+				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
+					customAttrs+=attrs.$attr[key];
+					if(attrs[key]) {
+						customAttrs+='='+attrs[key];
+					}
+					customAttrs+=' ';
+				}
+			});
+			
 			var html ="<div class='"+class1+"'>";
 				if(type =='pikaday') {
-					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' />";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value
+					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value
+					if(attrs.ngClick) {
+						html +="ng-click='ngClick()' ";
+					}
+					html +="/>";
 					// html+="<br />{{ngModel}}";
 				}
 				else if(type =='forge') {
-					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' />";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value (this especially breaks iOS native datetime input display)
+					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value (this especially breaks iOS native datetime input display)
+					if(attrs.ngClick) {
+						html +="ng-click='ngClick()' ";
+					}
+					html +="/>";
 					// html+="<br />{{ngModel}}";
 				}
 			html+="</div>";
@@ -280,6 +306,36 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				}
 				
 				triggerSkipSelect =false;		//NOW can validate, etc. as usual
+				
+				/**
+				@toc 4.
+				@method setModelVal
+				*/
+				function setModelVal(val) {
+					scope.ngModel =val;
+					var dateOnly =scope.ngModel;
+					var timeOnly ='';
+					if(scope.ngModel.indexOf(' ') >-1) {
+						dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
+						timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+					}
+
+					// picker.setDate(dateOnly);		//this will mess up due to timezone offset
+					picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
+					// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
+					picker.setTimeMoment(moment(timeOnly, 'HH:mm:ss'));
+				}
+				
+				/**
+				Allow updating value from outside directive ($watch doesn't work since it will fire infinitely from within the directive when a date/time is chosen so have to use a skip trigger or have to use $on instead to make it more selective. $on seems easier though it does require setting an scope.opts.id value)
+				@toc 4.5.
+				@method $scope.$on('uiDatetimepickerUpdateVal',..
+				*/
+				scope.$on('uiDatetimepickerUpdateVal', function(evt, params) {
+					if(scope.opts.id !==undefined && params.instId !==undefined && scope.opts.id ==params.instId) {		//only update if the correct instance
+						setModelVal(params.val);
+					}
+				});
 				
 				/**
 				@toc 1.5.

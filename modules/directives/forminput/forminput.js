@@ -50,6 +50,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Function} [onchangeDatetime] DATE/DATETIME type only. Will be called everytime date changes. Will pass the following parameters:
 		@param {String} date
 		@param {Object} params
+	@param {Function} ngClick Declared on scope so it will be "passed-through" appropriately; use as normal ng-click
 
 attrs
 	@param {String} [type ='text'] Input type, one of: 'text'
@@ -137,7 +138,8 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			optsDatetime: '=?',
 			// checkboxVals: '=?',
 			validateDatetime: '&?',
-			onchangeDatetime: '&?'
+			onchangeDatetime: '&?',
+			ngClick: '&?'
 		},
 		require: '?^form',		//if we are in a form then we can access the formController (necessary for validation to work)
 
@@ -175,7 +177,7 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			
 			//copy over attributes
 			var customAttrs ='';		//string of attrs to copy over to input
-			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'optsDatetime', 'validateDatetime', 'onchangeDatetime', 'checkboxVals'];
+			var skipAttrs =['uiForminput', 'ngModel', 'label', 'type', 'placeholder', 'opts', 'name', 'optsDatetime', 'validateDatetime', 'onchangeDatetime', 'checkboxVals', 'ngClick'];
 			angular.forEach(attrs, function (value, key) {
 				if (key.charAt(0) !== '$' && skipAttrs.indexOf(key) === -1) {
 					customAttrs+=attrs.$attr[key];
@@ -196,37 +198,64 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 			var uniqueName ="uiFormInput"+attrs.type+Math.random().toString(36).substring(7);
 			var elementTag ='input';
 			if(attrs.type =='text' || attrs.type =='email' || attrs.type =='tel' || attrs.type =='number' || attrs.type =='url') {
-				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='"+attrs.type+"' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='"+attrs.type+"' placeholder='"+placeholder+"' "+customAttrs+" ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="/>";
 			}
 			else if(attrs.type =='password') {
-				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" />";
+				html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='password' placeholder='"+placeholder+"' "+customAttrs+" ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="/>";
 			}
 			else if(attrs.type =='textarea') {
 				elementTag ='textarea';
-				html.input ="<textarea class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ></textarea>";
+				html.input ="<textarea class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' placeholder='"+placeholder+"' "+customAttrs+" ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="></textarea>";
 			}
 			else if(attrs.type =='checkbox') {
 				// html.input ="<input class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" />";
 				//doesn't work - apparently can't set ng-true-value and ng-false-value via scope...
 				// html.input ="<div class='ui-forminput-input ui-forminput-input-checkbox-cont'><input class='ui-forminput-input-checkbox' name='"+uniqueName+"' ng-model='ngModel' ng-true-value='{{checkboxVals.ngTrueValue}}' ng-false-value='{{checkboxVals.ngFalseValue}}' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" /></div>";
-				html.input ="<div class='ui-forminput-input ui-forminput-input-checkbox-cont'><input class='ui-forminput-input-checkbox' name='"+uniqueName+"' ng-model='ngModel' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" /></div>";
+				html.input ="<div class='ui-forminput-input ui-forminput-input-checkbox-cont'><input class='ui-forminput-input-checkbox' name='"+uniqueName+"' ng-model='ngModel' type='checkbox' placeholder='"+placeholder+"' "+customAttrs+" ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="/></div>";
 			}
 			else if(attrs.type =='select') {
 				elementTag ='select';
-				html.input ="<select class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts'></select>";
+				html.input ="<select class='ui-forminput-input' name='"+uniqueName+"' ng-model='ngModel' ng-change='onchange({})' "+customAttrs+" ng-options='opt.val as opt.name for opt in selectOpts' ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="></select>";
 			}
 			else if(attrs.type =='multi-select') {
 				elementTag ='div';
-				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts'></div>";
+				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-multiselect select-opts='selectOpts' ng-model='ngModel' config='opts' ";
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
+				}
+				html.input+="></div>";
 			}
 			else if(attrs.type =='date' || attrs.type =='datetime') {
 				elementTag ='div';
-				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-datetimepicker opts='optsDatetime' ng-model='ngModel'  placeholder='"+placeholder+"' ";
+				html.input ="<div class='ui-forminput-input' name='"+uniqueName+"' ui-datetimepicker opts='optsDatetime' ng-model='ngModel'  placeholder='"+placeholder+"' "+customAttrs;
 				if(attrs.validateDatetime) {
 					html.input +="validate='validateDatetime' ";
 				}
 				if(attrs.onchangeDatetime) {
 					html.input +="onchange='onchangeDatetime' ";
+				}
+				if(attrs.ngClick) {
+					html.input +="ng-click='ngClick()' ";
 				}
 				html.input+=">";
 				html.input+="</div>";
