@@ -889,6 +889,9 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						}
 						else {
 							$scope.noMoreLoadMoreItems.next =true;
+							if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems) {		//if already loaded previous items, hide prev load more too
+								$scope.noMoreLoadMoreItems.prev =true;
+							}
 						}
 					}
 				}
