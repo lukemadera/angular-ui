@@ -313,17 +313,25 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				*/
 				function setModelVal(val) {
 					scope.ngModel =val;
-					var dateOnly =scope.ngModel;
-					var timeOnly ='';
-					if(scope.ngModel.indexOf(' ') >-1) {
-						dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
-						timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+					if(type =='forge') {
+						//native inputs need input value to be a javascript date object? So need to convert it.
+						var dateObj =moment(scope.ngModel, 'YYYY-MM-DD HH:mm:ssZ');
+						var inputFormat =dateObj.format('YYYY-MM-DDTHH:mm:ssZ');
+						document.getElementById(attrs.id).value =inputFormat;
 					}
+					else {
+						var dateOnly =scope.ngModel;
+						var timeOnly ='';
+						if(scope.ngModel.indexOf(' ') >-1) {
+							dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
+							timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+						}
 
-					// picker.setDate(dateOnly);		//this will mess up due to timezone offset
-					picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
-					// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
-					picker.setTimeMoment(moment(timeOnly, 'HH:mm:ss'));
+						// picker.setDate(dateOnly);		//this will mess up due to timezone offset
+						picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
+						// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
+						picker.setTimeMoment(moment(timeOnly, 'HH:mm:ss'));
+					}
 				}
 				
 				/**
@@ -397,7 +405,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				*/
 				function handleValidOnchange(date, params) {
 					if(scope.onchange !==undefined && scope.onchange() !==undefined && typeof(scope.onchange()) =='function') {		//this is an optional scope attr so don't assume it exists
-						scope.onchange()(date, {});
+						scope.onchange()(date, {opts: scope.opts});
 					}
 				}
 			};
