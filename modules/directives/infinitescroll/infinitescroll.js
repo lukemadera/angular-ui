@@ -502,7 +502,9 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						ppSend.diffHeight =diffHeight;
 					}
 					
-					scrollToMiddle(ppSend);
+					if($scope.itemsView.length >=$attrs.pageSize) {		//only scroll if have a full page of items
+						scrollToMiddle(ppSend);
+					}
 					checkForScrollBar({});
 				}
 			}

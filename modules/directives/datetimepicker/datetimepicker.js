@@ -28,10 +28,12 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 @param {Function} validate Will be called everytime date changes PRIOR to setting the value of the date. Will pass the following parameters:
 	@param {String} date
 	@param {Object} params
+		@param {Object} opts The opts passed in
 	@param {Function} callback Expects a return of {Boolean} true if valid, false otherwise. If false, the value will be set to blank.
 @param {Function} onchange Will be called everytime date changes. Will pass the following parameters:
 	@param {String} date
 	@param {Object} params
+		@param {Object} opts The opts passed in
 @param {Object} opts
 	@param {Object} pikaday Opts to be used (will extend defaults) for pikaday
 	@param {String} [id] Will over-write attrs.id value if set (used for the input id)
@@ -366,7 +368,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 						updateModel(date, {});		//update ngModel BEFORE validation so the validate function has the value ALREADY set so can compare to other existing values (passing back the new value by itself without ngModel doesn't allow setting it so the function may not know what instance this value corresponds to). We'll re-update the model again later if invalid.
 						
 						if(scope.validate !==undefined && scope.validate() !==undefined && typeof(scope.validate()) =='function') {		//this is an optional scope attr so don't assume it exists
-							scope.validate()(date, {}, function(valid) {
+							scope.validate()(date, {opts: scope.opts}, function(valid) {
 								if(!valid) {		//may NOT want to blank out values actually (since datepicker closes on selection, this makes it impossible to change the time (to a valid one) after select a date). But as long as they pick the TIME first, they're okay (since time doesn't auto close the picker, only date does).
 									date ='';
 									//update pikaday plugin with blank date
@@ -379,7 +381,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 								}
 							});
 						}
-						else {		//assume valid since not validate function defined
+						else {		//assume valid since no validate function defined
 							handleValidOnchange(date, {});
 						}
 						if(!scope.$$phase) {
