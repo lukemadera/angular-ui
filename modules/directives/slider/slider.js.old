@@ -354,19 +354,19 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 
 	template_html += "<div id = '{{slider_id}}' ng-mousemove = 'mousemoveHandler($event); $event.preventDefault()' class = '{{container_class}}'>";
 		
-		template_html += "<div ng-click = 'barClickHandler($event)' class = '{{bar_container_class}}' ng-style = 'bar_container_style'>";
-			template_html += "<div id = '{{slider_id}}SliderBar' style = 'position:relative; width:100%;'>";
-				template_html += "<div class = '{{left_bg_class}}' ng-style = '{\"width\": left_bg_width + \"%\", \"position\": \"absolute\",  \"left\": \"0%\"}'> </div>";
-				template_html += "<div ng-repeat = 'handle in handles' id = '{{slider_id}}Handle{{$index}}' ng-mousedown = 'startHandleDrag($index); $event.preventDefault()' class = '{{handle_class}}' ng-style = '{\"z-index\": handle.zindex, \"left\": handle.left + \"%\", \"position\": \"absolute\"}' ng-bind-html-unsafe = 'handle.innerhtml'></div>";
-				template_html += "<div ng-repeat = 'interior in interiors' class = '{{interior_bg_class}}' ng-style = '{\"left\": interior.left + \"%\", \"width\": interior.width + \"%\", \"position\": \"absolute\"}'> </div>";
-				template_html += "<div class = '{{right_bg_class}}' ng-style = '{\"width\": right_bg_width + \"%\", \"position\": \"absolute\", \"right\": \"0%\"}'> </div>";
+		template_html += "<div ng-click = 'barClickHandler($event)' class = '{{bar_container_class}}' style = '{{bar_container_style}}'>";
+			template_html += "<div id = '{{slider_id}}SliderBar' style = '{{slider_bar_style}}'>";
+				template_html += "<div class = '{{left_bg_class}}' style = 'width:{{left_bg_width}}%; {{left_bg_style}}'> </div>";
+				template_html += "<div ng-repeat = 'handle in handles' id = '{{slider_id}}Handle{{$index}}' ng-mousedown = 'startHandleDrag($index); $event.preventDefault()' class = '{{handle_class}}' style = 'z-index: {{handle.zindex}}; left: {{handle.left}}%; {{handle_style}}' ng-bind-html-unsafe = 'handle.innerhtml'></div>";
+				template_html += "<div ng-repeat = 'interior in interiors' class = '{{interior_bg_class}}' style = 'left: {{interior.left}}%; width: {{interior.width}}%; {{interior_bg_style}}'> </div>";
+				template_html += "<div class = '{{right_bg_class}}' style = 'width:{{right_bg_width}}%; {{right_bg_style}}'> </div>";
 				template_html += "<div>";			//Dummy div to wrap ticks, so nth-of-type selectors will work (they ought to work without the wrapper, but don't)
-					template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_class}}' ng-style = '{\"position\": \"absolute\", \"left\": tick.left + \"%\"}'> </div>";		//If use_ticks not true, scope.ticks will be empty. Thus we don't need an ng-show here.
+					template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_class}}' style = 'position: absolute; left:{{tick.left}}%;'> </div>";		//If use_ticks not true, scope.ticks will be empty. Thus we don't need an ng-show here.
 				template_html += "</div>";
 			template_html += "</div>";
 			
 			template_html += "<div class = '{{ticks_values_container_class}}' style = 'position: relative;' ng-show = 'use_ticks'>";
-				template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_value_class}}' ng-style = '{\"position\": \"absolute\", \"left\": tick.left + \"%\"}'> {{tick.name}} </div>";
+				template_html += "<div ng-repeat = 'tick in ticks' class = '{{ticks_value_class}}' style = 'position: absolute; left:{{tick.left}}%;'> {{tick.name}} </div>";
 			template_html += "</div>";
 		template_html += "</div>";
 	template_html += "</div>";
@@ -718,20 +718,14 @@ angular.module('ui.directives').directive('uiSlider', ['uiPolynomial', 'uiSlider
 			
 			var setStyles = function()
 			{			
-				/* Now handled in the template directly via ng-style, for IE compatibility
-				
 				//Setup needed bar styles
+				scope.slider_bar_style = 'position:relative; width:100%;';
 				scope.left_bg_style = 'position:absolute; left:0%;';				//width varies depending on handle position; define separately.
 				scope.interior_bg_style = 'position:absolute;';						//left, width varies depending on handles; define separately.
 				scope.right_bg_style = 'position:absolute; right:0%;';				//width varies depending on handle position; define separately.
 				scope.handle_style = 'position:absolute;';
-				*/
-				
-				// var ro = 'rotate(' + scope.rotate + 'deg); ';
-				// scope.bar_container_style = '-moz-transform:' + ro + '-webkit-transform:' + ro + '-o-transform:' + ro + '-ms-transform:' + ro + 'transform:' + ro;
-				//ng-style requires object format
-				var ro = 'rotate(' + scope.rotate + 'deg)';
-				scope.bar_container_style = {'-moz-transform': ro, '-webkit-transform': ro, '-o-transform': ro, '-ms-transform': ro, 'transform': ro};
+				var ro = 'rotate(' + scope.rotate + 'deg); ';
+				scope.bar_container_style = '-moz-transform:' + ro + '-webkit-transform:' + ro + '-o-transform:' + ro + '-ms-transform:' + ro + 'transform:' + ro;
 				
 			};	//End setStyles
 			
