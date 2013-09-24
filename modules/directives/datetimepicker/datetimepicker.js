@@ -195,7 +195,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 					// html+="<br />{{ngModel}}";
 				}
 				else if(type =='forge') {
-					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value (this especially breaks iOS native datetime input display)
+					html +="<input class='ui-datetimepicker-input' type='datetime-local' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value (this especially breaks iOS native datetime input display)		//UPDATE for iOS7 - need to use 'datetime-local' since 'datetime' input type is no longer supported..
 					if(attrs.ngClick) {
 						html +="ng-click='ngClick()' ";
 					}
@@ -218,14 +218,19 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				
 				var triggerSkipSelect =true;		//trigger to avoid validating, etc. on setting initial/default value
 				
+				var inputFormatString;
+				
 				if(type =='forge') {
+					// inputFormatString ='YYYY-MM-DDTHH:mm:ssZ';
+					inputFormatString ='YYYY-MM-DDTHH:mm:ss';		//datetime-local now so no timezone (including it will not properly set the input (default) value)
+					
 					forge.ui.enhanceInput('#'+attrs.id);
 					
 					//set initial value
 					if(scope.ngModel) {
 						//native inputs need input value to be a javascript date object? So need to convert it.
 						var dateObj =moment(scope.ngModel, 'YYYY-MM-DD HH:mm:ssZ');
-						var inputFormat =dateObj.format('YYYY-MM-DDTHH:mm:ssZ');
+						var inputFormat =dateObj.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 					}
 					
@@ -256,7 +261,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 						//update input value with non UTC value
 						// var inputFormat =dtInfo.date;		//not working
 						// var inputFormat =dtInfo.dateFormatted;		//kind of works for Android but not completely and not at all for iOS..
-						var inputFormat =dtInfo.date.format('YYYY-MM-DDTHH:mm:ssZ');
+						var inputFormat =dtInfo.date.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 						
 						onSelectDate(dtInfo.dateFormatted);
@@ -318,7 +323,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 					if(type =='forge') {
 						//native inputs need input value to be a javascript date object? So need to convert it.
 						var dateObj =moment(scope.ngModel, 'YYYY-MM-DD HH:mm:ssZ');
-						var inputFormat =dateObj.format('YYYY-MM-DDTHH:mm:ssZ');
+						var inputFormat =dateObj.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 					}
 					else {
