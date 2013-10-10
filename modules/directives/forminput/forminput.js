@@ -42,7 +42,6 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 		// @param {String} [ngTrueValue =1] The value the ngModel will be equal to if the checkbox is checked
 		// @param {String} [ngFalseValue =0] The value the ngModel will be if the checkbox is NOT checked
 	@param {Object} [optsDatetime] DATE/DATETIME type only. Opts that will be passed through to ui-datetimepicker directive (see there for full documentation)
-		@param {Object} [pikaday] Opts to be used (will extend defaults) for pikaday
 	@param {Function} [validateDatetime] DATE/DATETIME type only. Will be called everytime date changes PRIOR to setting the value of the date. Will pass the following parameters:
 		@param {String} date
 		@param {Object} params

@@ -24,7 +24,7 @@ NOTE: I added in a "setTimeMoment" function to the forked file so it's now using
 3. handleValidOnchange
 
 scope (attrs that must be defined on the scope (i.e. in the controller) - they can't just be defined in the partial html)
-@param {String} ngModel Datetime string in format 'YYYY-MM-DD HH:mm:ssZ'. Time is optional.
+@param {String} ngModel Datetime string in format specified by opts.formatModel [see below]. Time is optional.
 @param {Function} validate Will be called everytime date changes PRIOR to setting the value of the date. Will pass the following parameters:
 	@param {String} date
 	@param {Object} params
@@ -35,7 +35,9 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 	@param {Object} params
 		@param {Object} opts The opts passed in
 @param {Object} opts
-	@param {Object} pikaday Opts to be used (will extend defaults) for pikaday
+	@param {String} [formatModel ='YYYY-MM-DD HH:mm:ssZ'] The string datetime format for the actual value
+	@param {String} [formatDisplay ='YYYY-MM-DD HH:mm:ssZ'] NOT SUPPORTED FOR FORGE/TRIGGERIO NATIVE INPUTS. The string datetime format to display in the input - this will overwrite the pikaday.format value
+	@param {Object} pikaday Opts to be used (will extend defaults) for pikaday - see https://github.com/owenmead/Pikaday for list of options. NOTE: the 'format' field will be overwritten by opts.formatDisplay so set format there instead.
 	@param {String} [id] Will over-write attrs.id value if set (used for the input id)
 @param {Function} ngClick Declared on scope so it can be 'passed through' from parent controller; just use as normal ng-click
 
@@ -206,6 +208,15 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 			element.replaceWith(html);
 			
 			return function(scope, element, attrs) {
+				//extend defaults
+				var defaults ={
+					opts: {
+						formatModel: 'YYYY-MM-DD HH:mm:ssZ',
+						formatDisplay: 'YYYY-MM-DD HH:mm:ssZ'
+					}
+				};
+				scope.opts =angular.extend(defaults.opts, scope.opts);
+			
 				//if was in an ng-repeat, they'll have have the same compile function so have to set the id here, NOT in the compile function (otherwise they'd all be the same..)
 				if(scope.opts.id !==undefined) {
 					attrs.id =scope.opts.id;
@@ -229,7 +240,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 					//set initial value
 					if(scope.ngModel) {
 						//native inputs need input value to be a javascript date object? So need to convert it.
-						var dateObj =moment(scope.ngModel, 'YYYY-MM-DD HH:mm:ssZ');
+						var dateObj =moment(scope.ngModel, scope.opts.formatModel);
 						var inputFormat =dateObj.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 					}
@@ -256,7 +267,9 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 						}
 						
 						//convert to local timezone (so it matches what the user actually selected)
-						var dtInfo =convertTimezone(dateMoment, tzFromMinutes, false, {'format':'YYYY-MM-DD HH:mm:ssZ'});
+						var format1 ='YYYY-MM-DD HH:mm:ssZ';
+						var dtInfo =convertTimezone(dateMoment, tzFromMinutes, false, {'format':format1});
+						var formattedModelVal =moment(dtInfo.dateFormatted, format1).format(scope.opts.formatModel);
 						
 						//update input value with non UTC value
 						// var inputFormat =dtInfo.date;		//not working
@@ -264,14 +277,14 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 						var inputFormat =dtInfo.date.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 						
-						onSelectDate(dtInfo.dateFormatted);
+						onSelectDate(formattedModelVal);
 					});
 				}
 				else {		//pikaday
 					var defaultPikadayOpts ={
 						field: document.getElementById(attrs.id),
 						onSelect: function() {
-							var date =this.getMoment().format('YYYY-MM-DD HH:mm:ssZ');
+							var date =this.getMoment().format(scope.opts.formatModel);
 							onSelectDate(date);
 						},
 						
@@ -291,23 +304,27 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 					if(scope.opts.pikaday ===undefined) {
 						scope.opts.pikaday ={};
 					}
+					scope.opts.pikaday.format =scope.opts.formatDisplay;		//overwrite with passed in (or default) format
 					var pikadayOpts =angular.extend(defaultPikadayOpts, scope.opts.pikaday);
 					
 					var picker =new Pikaday(pikadayOpts);
 					
 					//set initial value
 					if(scope.ngModel) {
-						var dateOnly =scope.ngModel;
+						var dateFormat ='YYYY-MM-DD';
+						var timeFormat ='HH:mm:ss';
+						var modelFormatted =moment(scope.ngModel, scope.opts.formatModel).format(dateFormat+' '+timeFormat+'Z');
+						var dateOnly =modelFormatted;
 						var timeOnly ='';
-						if(scope.ngModel.indexOf(' ') >-1) {
-							dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
-							timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+						if(modelFormatted.indexOf(' ') >-1) {
+							dateOnly =modelFormatted.slice(0,modelFormatted.indexOf(' '));
+							timeOnly =modelFormatted.slice((modelFormatted.indexOf(' ')+1), modelFormatted.length);
 						}
 
 						// picker.setDate(dateOnly);		//this will mess up due to timezone offset
-						picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
+						picker.setMoment(moment(dateOnly, dateFormat));		//this works (isn't affected by timezone offset)
 						// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
-						picker.setTimeMoment(moment(timeOnly, 'HH:mm:ss'));
+						picker.setTimeMoment(moment(timeOnly, timeFormat));
 						// document.getElementById(attrs.id).value ='2010-01-01 12:02:00';		//works but doesn't update the picker views
 					}				
 				}
@@ -317,27 +334,31 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				/**
 				@toc 4.
 				@method setModelVal
+				@param {String} val The value to set the ngModel to - will NOT be re-formatted so it should already be in the corrent string format (must match scope.opts.formatModel)
 				*/
 				function setModelVal(val) {
 					scope.ngModel =val;
 					if(type =='forge') {
 						//native inputs need input value to be a javascript date object? So need to convert it.
-						var dateObj =moment(scope.ngModel, 'YYYY-MM-DD HH:mm:ssZ');
+						var dateObj =moment(scope.ngModel, scope.opts.formatModel);
 						var inputFormat =dateObj.format(inputFormatString);
 						document.getElementById(attrs.id).value =inputFormat;
 					}
 					else {
-						var dateOnly =scope.ngModel;
+						var dateFormat ='YYYY-MM-DD';
+						var timeFormat ='HH:mm:ss';
+						var modelFormatted =moment(scope.ngModel, scope.opts.formatModel).format(dateFormat+' '+timeFormat+'Z');
+						var dateOnly =modelFormatted;
 						var timeOnly ='';
-						if(scope.ngModel.indexOf(' ') >-1) {
-							dateOnly =scope.ngModel.slice(0,scope.ngModel.indexOf(' '));
-							timeOnly =scope.ngModel.slice((scope.ngModel.indexOf(' ')+1), scope.ngModel.length);
+						if(modelFormatted.indexOf(' ') >-1) {
+							dateOnly =modelFormatted.slice(0,modelFormatted.indexOf(' '));
+							timeOnly =modelFormatted.slice((modelFormatted.indexOf(' ')+1), modelFormatted.length);
 						}
 
 						// picker.setDate(dateOnly);		//this will mess up due to timezone offset
-						picker.setMoment(moment(dateOnly, 'YYYY-MM-DD'));		//this works (isn't affected by timezone offset)
+						picker.setMoment(moment(dateOnly, dateFormat));		//this works (isn't affected by timezone offset)
 						// picker.setTime(scope.ngModel);		//doesn't work; nor does picker.setTime([hour], [minute], [second]);
-						picker.setTimeMoment(moment(timeOnly, 'HH:mm:ss'));
+						picker.setTimeMoment(moment(timeOnly, timeFormat));
 					}
 				}
 				
@@ -345,6 +366,9 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				Allow updating value from outside directive ($watch doesn't work since it will fire infinitely from within the directive when a date/time is chosen so have to use a skip trigger or have to use $on instead to make it more selective. $on seems easier though it does require setting an scope.opts.id value)
 				@toc 4.5.
 				@method $scope.$on('uiDatetimepickerUpdateVal',..
+				@param {Object} params
+					@param {String} instId
+					@param {String} val Correctly formatted date(time) string (must match scope.opts.formatModel) to set ngModel to
 				*/
 				scope.$on('uiDatetimepickerUpdateVal', function(evt, params) {
 					if(scope.opts.id !==undefined && params.instId !==undefined && scope.opts.id ==params.instId) {		//only update if the correct instance
@@ -366,7 +390,7 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 				/**
 				@toc 1.
 				@method onSelectDate
-				@param {String} date The date to set in 'YYYY-MM-DD HH:mm:ssZ' format
+				@param {String} date The date to set in scope.opts.formatModel - MUST already be in correct format!
 				*/
 				function onSelectDate(date) {
 					if(!triggerSkipSelect) {
