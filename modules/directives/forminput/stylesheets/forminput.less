@@ -18,6 +18,10 @@
 .ui-forminput-validation {
 	padding-bottom:9px;
 }
+.ui-forminput-input {
+	margin-top:5px;
+	margin-bottom:5px;
+}
 
 
 /*
@@ -90,7 +94,7 @@ input[type="checkbox"].ui-forminput-input-checkbox {
 
 .ui-forminput-form.wide label, .ui-forminput-form.wider label, .ui-forminput-form.widest label
 {
-	margin-top:.4em;
+	margin-top:9px;
 	text-align:right;
 	margin-right:@input-margin-right*1px;
 }
@@ -116,7 +120,6 @@ input[type="checkbox"].ui-forminput-input-checkbox {
 	margin:2px (@input-extra-margin*1px);		//give some spacing to reduce chances of input overflowing (i.e. for border-radius rounded corners)
 	margin:2px 0;		//give some spacing to reduce chances of input overflowing (i.e. for border-radius rounded corners) BUT ensure no left/right padding since that could lead to width:100%; inputs overflowing outside it's container!
 	*/
-	margin:2px 0;
 	display:block;		//to ensure the input obeys sizing (flex box, box-sizing, etc.) and stays INSIDE it's container!
 }
 
