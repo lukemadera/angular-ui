@@ -194,17 +194,18 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			var html="<div class='ui-infinitescroll'>"+
 				"<div class='ui-infinitescroll-top'>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} negative: {{opts.cursors.negative}} items.length: {{items.length}}</div>"+		//TESTING
-					//"<div>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
+					//"<div style='position:absolute; z-index:10; right:0; top:60px; background-color:orange;'>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
-					"<div ng-hide='trigs.loading || (noMoreLoadMoreItems.prev) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
+					//it's important to NOT show any loading stuff until AFTER the check for the scrollbar has been done - since showing text increases/changes the height and when they disappear it could then have no scrollbar anymore!
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
 					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
-					"<div ng-show='noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+
+					"<div ng-show='trigs.scrollbarChecked && noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+
 				"</div>"+
 			"</div>";
 				
@@ -243,7 +244,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			//to allow / handle loading items below "0". The logic inside this directive (and arrays) can't/won't go below 0 so we'll just keep it at 0 and use this to keep track of what the "negative offset" is
 			$scope.opts.cursors.negative =0;
 			//$scope.cursorNegative =0;
-			$scope.trigs ={'loading':true};
+			$scope.trigs ={
+				loading:true,
+				scrollbarChecked: false
+			};
 			//$scope.items =[];
 			
 			//boolean that will be set to true if (backend) has no more items (i.e. we're at the end of the list and can't load any more)
@@ -394,6 +398,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			*/
 			function init(params) {
 				$scope.trigs.loading =true;
+				$scope.trigs.scrollbarChecked =false;
 				//$scope.page =1;		//will store what page (broken up by pageSize attr) we're on
 				$scope.page =Math.floor($scope.opts.cursors.itemsView.current / $attrs.pageSize);
 				setItemsViewCursor({});
@@ -422,6 +427,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					
 					//update / reset triggers
 					$scope.trigs.loading =true;
+					$scope.trigs.scrollbarChecked =false;
 					
 					$scope.noMoreLoadMoreItems.prev =false;
 					$scope.noMoreLoadMoreItems.next =false;
@@ -940,7 +946,11 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 								$scope.hasScrollbar =false;
 							}
 						}
+						$scope.trigs.scrollbarChecked =true;
 					}, 100);
+				}
+				else {
+					$scope.trigs.scrollbarChecked =true;
 				}
 			}
 			
