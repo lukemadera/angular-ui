@@ -79,8 +79,8 @@ $scope.uploadOpts =
 	'callbackInfo':{'evtName':evtImageUpload, 'args':[{'var1':'yes'}]},
 	'imageServerKeys':{'imgFileName':'fileNameSave', 'picHeight':'picHeight', 'picWidth':'picWidth', 'imgFileNameCrop':'newFileName'},		//hardcoded must match: server return data keys
 	//'htmlDisplay':"<div class='ig-form-pic-upload'><div class='ig-form-pic-upload-button'>Select Photo</div></div>",
-	'cropOptions': {'cropMaxHeight':500, 'cropMaxWidth':500},
-	//'values':{'dirPath':'/uploads'},
+	'cropOptions': {'cropMaxHeight':500, 'cropMaxWidth':500}
+	//'values':{'dirPath':'/uploads'}
 };
 
 //OPTIONAL

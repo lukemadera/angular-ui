@@ -1,4 +1,7 @@
 /**
+@todo
+- remove jQuery dependency
+
 Uses one associative array (raw data) to build a concatenated scalar (final/display) array of items to search / filter.
 	Adds upon ng-filter directive with the following features:
 	- handles paging / loading more when scroll to bottom

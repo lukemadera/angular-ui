@@ -1,3 +1,17 @@
+# OBSOLETE
+This has been refactored and modularized to individual modules:
+- https://github.com/jackrabbitsgroup/angular-forminput
+- https://github.com/jackrabbitsgroup/angular-multiselect
+- https://github.com/jackrabbitsgroup/angular-datetimepicker
+- https://github.com/jackrabbitsgroup/angular-infinitescroll
+- https://github.com/jackrabbitsgroup/angular-lookup
+- https://github.com/jackrabbitsgroup/angular-carousel-directive
+- https://github.com/jackrabbitsgroup/angular-image-upload
+- https://github.com/jackrabbitsgroup/angular-slider-directive
+
+More directives may be added, check https://github.com/jackrabbitsgroup
+
+
 # AngularUI - The companion suite for AngularJS
 
 ***

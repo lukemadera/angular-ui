@@ -1,4 +1,7 @@
 /**
+@todo
+- remove jQuery dependency
+
 Uses one array and start / end indices (cursor) to set a combination of DOM elements, javascript data, and backend (AJAX) data to handle paging/infinite scroll loading of content (i.e. a list of objects)
 	- handles paging / loading more when scroll to bottom
 	- can be used with a backend lookup call to load more results (if "loadMore" attr/scope function is passed in)
