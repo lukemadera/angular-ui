@@ -52,6 +52,7 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 @param {Function} uploadComplete Function to call after successful upload (all data from server will be passed back as is
 
 attrs
+	@param {Number} no-display 1 to NOT show display (upload progress - this will silently handle the upload)
 
 ALSO SEE DOCUMENATION FOR THE 'uiMultiFileUploadGo' function for which parameters it takes as this is the event to call to actually trigger the file upload to start!
 
@@ -129,7 +130,8 @@ angular.module('ui.directives').directive('uiMultiFileUpload', [function () {
 
 		compile: function(element, attrs) {
 			var defaults ={
-				showProgress:true
+				showProgress:true,
+				noDisplay: 0
 			};
 			var xx;
 			// attrs =angular.extend(defaults, attrs);		//doesn't work.. attrs.id is undefined
@@ -138,6 +140,8 @@ angular.module('ui.directives').directive('uiMultiFileUpload', [function () {
 					attrs[xx] =defaults[xx];
 				}
 			}
+			//convert to / ensure number
+			attrs.noDisplay =parseInt(attrs.noDisplay, 10);
 			
 			if(attrs.id ===undefined) {		//would use scope.opts.instId but don't have access to scope yet..
 				attrs.id ="uiMultiFileUpload"+Math.random().toString(36).substring(7);
@@ -168,12 +172,14 @@ angular.module('ui.directives').directive('uiMultiFileUpload', [function () {
 					*/
 					"<iframe id='"+attrs.ids.form.iframe+"' name='"+attrs.ids.form.iframe+"' style='display:none;'></iframe>"+
 				"</div>"+
-				"<div ng-show='showLoading' class='ui-multi-file-upload-loading center'>Loading..</div>"+
-				"<div id='"+attrs.ids.progress.bar+"' class='ui-multi-file-upload-progress-bar'><div id='"+attrs.ids.progress.barInner+"' class='ui-multi-file-upload-progress-bar-inner'>&nbsp;</div></div>"+
-				"<div>{{progressNumber}}</div>"+
-				// "<div>{{fileInfo.name}}</div>"+
-				// "<div>{{fileInfo.size}}</div>"+
-				// "<div>{{fileInfo.type}}</div>"+
+				"<div ng-hide='"+attrs.noDisplay+"'>"+
+					"<div ng-show='showLoading' class='ui-multi-file-upload-loading center'>Loading..</div>"+
+					"<div id='"+attrs.ids.progress.bar+"' class='ui-multi-file-upload-progress-bar'><div id='"+attrs.ids.progress.barInner+"' class='ui-multi-file-upload-progress-bar-inner'>&nbsp;</div></div>"+
+					"<div>{{progressNumber}}</div>"+
+					// "<div>{{fileInfo.name}}</div>"+
+					// "<div>{{fileInfo.size}}</div>"+
+					// "<div>{{fileInfo.type}}</div>"+
+				"</div>"+
 			"</div>";
 			element.replaceWith(html);
 		},

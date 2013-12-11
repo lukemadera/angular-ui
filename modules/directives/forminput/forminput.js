@@ -332,17 +332,27 @@ angular.module('ui.directives').directive('uiForminput', ['ui.config', '$compile
 					minlength: 'Too short!',
 					maxlength: 'Too long!',
 					pattern: 'Invalid characters!',
-					email: 'Invalid email'
-					// number: 'Must be a number!'		//not working
+					email: 'Invalid email',
+					number: 'Must be a number!'		//not working
 				}
 			};
+			//fix for webkit where type='number' inputs just clear the value on invalid characters so we see the (wrong) required error message rather than a more descriptive/accurate 'must be a number' or 'invalid characters' error messages
+			if($attrs.type =='number') {
+				defaultOpts.validationMessages.required ='Must be a valid number!';
+			}
+			
 			if(!$scope.opts || $scope.opts ===undefined) {
 				$scope.opts1 =defaultOpts;
 			}
 			else {		//extend defaults
 				var xx;
 				for(xx in defaultOpts) {
-					$scope.opts1[xx] =defaultOpts[xx];
+					if($scope.opts[xx] && $scope.opts[xx] !==undefined) {
+						$scope.opts1[xx] =angular.extend(defaultOpts[xx], $scope.opts[xx]);
+					}
+					else {
+						$scope.opts1[xx] =defaultOpts[xx];
+					}
 				}
 			}
 			
