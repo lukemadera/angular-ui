@@ -195,14 +195,14 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 				}
 				html+=">";
 				if(attrs.showArrows) {
-					html+="<div ng-show='show.prev' class='ui-carousel-prev' ng-click='nav(\"prev\", {})'><div class='ui-carousel-arrow-outer'>"+htmlPrev+"</div></div>";
+					html+="<div ng-show='show.prev' class='ui-carousel-prev' ng-click='nav(\"prev\", {})'><div class='ui-carousel-arrow-outer flexbox center'>"+htmlPrev+"</div></div>";
 				}
 				if(attrs.swipeOverlay) {
 					html+="<div class='ui-carousel-content-swipe'></div>";
 				}
 				html+="<div id='"+attrs.ids.content+"' class='ui-carousel-content' style='width:{{styles.content.width}}px; margin-left:{{styles.content.marginLeft}}px;' ng-transclude></div>";
 				if(attrs.showArrows) {
-					html+="<div ng-show='show.next' class='ui-carousel-next' ng-click='nav(\"next\", {})'><div class='ui-carousel-arrow-outer'>"+htmlNext+"</div></div>";
+					html+="<div ng-show='show.next' class='ui-carousel-next' ng-click='nav(\"next\", {})'><div class='ui-carousel-arrow-outer flexbox center'>"+htmlNext+"</div></div>";
 				}
 				html+="</div>";
 			html+="</div>";
