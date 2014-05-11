@@ -350,6 +350,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					
 					// scope.styles.content.width =animateInfo.totWidth;		//do NOT set it to parent; needs to be full width of ALL slides side by side
 					scope.styles.content.width =animateInfo.width*maxSlides;
+					document.getElementById(attrs.ids.content).style.width =(animateInfo.width*maxSlides)+'px';		//IE fix
 					// console.log('animateInfo: '+JSON.stringify(animateInfo)+' maxSlides: '+maxSlides);
 					
 					//if num slides is calculated dynamically, do it now
@@ -461,6 +462,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 					}
 					// $(ele).css({'margin-left':marginLeft+'px'});
 					scope.styles.content.marginLeft =marginLeft;
+					document.getElementById(attrs.ids.content).style.marginLeft =(marginLeft)+'px';		//IE fix
 					// angular.element(ele).css({'margin-left':marginLeft+'px'});
 				};
 				

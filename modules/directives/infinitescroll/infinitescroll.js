@@ -62,6 +62,8 @@ attrs
 	@param {Number} [animateAfterItems=0] Number of items to slow pan through (to indicate to user that something has changed) AFTER jump to middle, etc. NOTE: this must be less than half of pageSize (if it's not, it will be cut to 1/4 of page size) otherwise it will cause loading of next pages leading to infinite auto scrolling through ALL items!
 	@param {Number} [animateAfterDuration=1000] Milliseconds for how long animation is for the after items animate
 	@param {String} [noMoreResultsText =No More Results!] What to display when have no more items to load (i.e. at very bottom)
+	@param {String} [loadMorePreviousText =Load More] What to display on TOP to click to load more items
+	@param {String} [loadMoreNextText =Load More] What to display on BOTTOM to click to load more items
 	@param {Number} [minItemsToShow =0] If set, will try to ensure at least this many items are visible - specifically, on initial load, if have previous items and not enough future/current items, will load some previous items to fill up to this amount.
 
 
@@ -154,7 +156,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':50, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!', 'minItemsToShow':0};
+			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':50, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!', 'loadMorePreviousText':'Load More', 'loadMoreNextText':'Load More', 'minItemsToShow':0};
 			for(var xx in defaults) {
 				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
@@ -200,12 +202,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					//"<div style='position:absolute; z-index:10; right:0; top:60px; background-color:orange;'>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 					//it's important to NOT show any loading stuff until AFTER the check for the scrollbar has been done - since showing text increases/changes the height and when they disappear it could then have no scrollbar anymore!
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>Load More</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>"+attrs.loadMorePreviousText+"</div>"+
 					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>Load More</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>"+attrs.loadMoreNextText+"</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
 					"<div ng-show='trigs.scrollbarChecked && noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+

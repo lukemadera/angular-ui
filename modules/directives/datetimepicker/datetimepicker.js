@@ -190,7 +190,9 @@ angular.module('ui.directives').directive('uiDatetimepicker', [function () {
 			
 			var html ="<div class='"+class1+"'>";
 				if(type =='pikaday') {
-					html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value
+					//NOTE: do NOT use ng-model here since we want the displayed value to potentially be DIFFERENT than the returned (ngModel) value
+					// html +="<input class='ui-datetimepicker-input' type='datetime' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";
+					html +="<input class='ui-datetimepicker-input' type='text' placeholder='"+attrs.placeholder+"' "+customAttrs+" ";		//do NOT use datetime input type here when using pikaday to avoid duplicate / competing input types
 					if(attrs.ngClick) {
 						html +="ng-click='ngClick()' ";
 					}
