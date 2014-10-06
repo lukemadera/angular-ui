@@ -200,7 +200,7 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 				if(attrs.swipeOverlay) {
 					html+="<div class='ui-carousel-content-swipe'></div>";
 				}
-				html+="<div id='"+attrs.ids.content+"' class='ui-carousel-content' style='width:{{styles.content.width}}px; margin-left:{{styles.content.marginLeft}}px;' ng-transclude></div>";
+				html+="<div id='"+attrs.ids.content+"' class='ui-carousel-content' style='width:{{styles.content.width}}px; margin-left:{{styles.content.marginLeft}}px' ng-transclude></div>";
 				if(attrs.showArrows) {
 					html+="<div ng-show='show.next' class='ui-carousel-next' ng-click='nav(\"next\", {})'><div class='ui-carousel-arrow-outer flexbox center'>"+htmlNext+"</div></div>";
 				}
@@ -437,6 +437,9 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 									scope.opts.curSlide =0;
 								}
 							}
+							else{
+								scope.opts.curSlide =(maxSlides-1);		// if we go below 0, we need to wrap to the end.
+							}
 						}
 						else if(to =='next') {
 							if(scope.opts.curSlide <(maxSlides-navNumItems)) {
@@ -446,6 +449,9 @@ angular.module('ui.directives').directive('uiCarousel', ['uiCarouselResize', '$t
 								if(scope.opts.curSlide >=(maxSlides-1)) {
 									scope.opts.curSlide =(maxSlides-1);
 								}
+							}
+							else{
+								scope.opts.curSlide =0;		//if we go past max slides, need to wrap back to 0
 							}
 						}
 						else if(to =='first') {
