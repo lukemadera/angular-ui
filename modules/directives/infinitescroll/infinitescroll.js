@@ -46,6 +46,8 @@ scope (attrs that must be defined on the scope (i.e. in the controller) - they c
 				@param {Number} current of what item to start on - this will correspond to the current page and then the start and end will be formed as 1 pageSize forward and 1 pageSize backward
 		@param {String} scrollId of id for element to watch scrolling on (instead of using window/full page scroll bar OR the ui-infinitescroll-content element built in this directive as the default scroll div)
 		@param {String} [instId] Unique id for this instance of the directive. Used for calling events (i.e. for reInit) to avoid acting on ALL directives.
+		@param {Number} [alwaysShowLoadMorePrevText =0] 1 to show load more text/button even if scroll load and have scrollbar
+		@param {Number} [alwaysShowLoadMoreNextText =0] 1 to show load more text/button even if scroll load and have scrollbar
 	@param {Function} loadMore Function to call to load more results (this should update $scope.items, which will then update in the directive via $watch). OR '0' if don't have loadMore function at all
 
 attrs
@@ -202,12 +204,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					//"<div style='position:absolute; z-index:10; right:0; top:60px; background-color:orange;'>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 					//it's important to NOT show any loading stuff until AFTER the check for the scrollbar has been done - since showing text increases/changes the height and when they disappear it could then have no scrollbar anymore!
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>"+attrs.loadMorePreviousText+"</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (!opts.alwaysShowLoadMorePrevText && scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>"+attrs.loadMorePreviousText+"</div>"+
 					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>"+attrs.loadMoreNextText+"</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (!opts.alwaysShowLoadMoreNextText && scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>"+attrs.loadMoreNextText+"</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
 					"<div ng-show='trigs.scrollbarChecked && noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+
@@ -228,8 +230,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						'current':0
 					}
 				},
-				'scrollId':false
-				// 'instId':$attrs.id
+				'scrollId':false,
+				// 'instId':$attrs.id,
+				alwaysShowLoadMorePrevText: 0,
+				alwaysShowLoadMoreNextText: 0
 			};
 			if($scope.opts ===undefined) {
 				$scope.opts ={};
@@ -905,9 +909,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						}
 						else {
 							$scope.noMoreLoadMoreItems.next =true;
-							if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems) {		//if already loaded previous items, hide prev load more too
-								$scope.noMoreLoadMoreItems.prev =true;
-							}
+							//2014.10.06 - not sure why this is here but it's causing issues where load more button disappears when it shouldn't..
+							// if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems) {		//if already loaded previous items, hide prev load more too
+								// $scope.noMoreLoadMoreItems.prev =true;
+							// }
 						}
 					}
 				}
