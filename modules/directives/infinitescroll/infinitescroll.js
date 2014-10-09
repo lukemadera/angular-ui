@@ -54,6 +54,7 @@ attrs
 	@param {Number} [scrollLoad =0] 1 to do paging via scrolling as opposed to with "load more" button to click to load more. NOTE: if set, this you MUST either set pageScroll to 1 OR pass in a scrollId in opts.scrollId scope variable
 	@param {Number} [pageScroll =0] 1 to do paging via scrolling for entire window as opposed to a specific div (good for mobile / touch screens where only 1 scroll bar works well)
 	@param {Number} [scrollBuffer =50] How much space from top or bottom to start switching the page
+	@param {Number} [hasScrollbarBuffer =50] Number of pixels where if the scroll bar is just barely there and can only scroll less than this amount, the prev/next load more buttons will still show (to ensure do not get "stuck" where there's no button but can't scroll enough to trigger loading more)
 	@param {Number} [pageSize =10] How many results to show at a time (will load more in increments of pageSize as scroll down / click "more"). NOTE: will show TWO pages at a time - so if want to show 10 TOTAL items, make pageSize be 5.
 	@param {Number} [loadMorePageSize =20] How many results to load at a time - must be at least as large as pageSize (and typically should be at least 2 times as big as page size?? maybe not? just need to ensure never have to AJAX twice to display 1 page)
 	@param {Number} [noStopLoadMore =0] 1 to not set noMoreLoadMoreItems prev & next to true if don't have enough results returned from load more
@@ -158,14 +159,14 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 		},
 
 		compile: function(element, attrs) {
-			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':50, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!', 'loadMorePreviousText':'Load More', 'loadMoreNextText':'Load More', 'minItemsToShow':0};
+			var defaults ={'pageSize':10, 'scrollLoad':'0', 'loadMorePageSize':20, 'pageScroll':0, 'scrollBuffer':50, 'scrollBufferPercent':33, 'noStopLoadMore':0, 'negativeLoad':0, 'animateLoad':0, 'animateScrollDuration':1000, 'itemHeight':0, 'animateAfterItems':0, 'animateAfterDuration':1000, 'noMoreResultsText':'No More Results!', 'loadMorePreviousText':'Load More', 'loadMoreNextText':'Load More', 'minItemsToShow':0, 'hasScrollbarBuffer':50 };
 			for(var xx in defaults) {
 				if(attrs[xx] ===undefined) {
 					attrs[xx] =defaults[xx];
 				}
 			}
 			//convert to int
-			var attrsToInt =['pageSize', 'loadMorePageSize', 'scrollLoad', 'scrollBuffer', 'pageScroll', 'noStopLoadMore', 'negativeLoad', 'animateLoad', 'animateScrollDuration', 'itemHeight', 'animateAfterItems', 'animateAfterDuration', 'minItemsToShow'];
+			var attrsToInt =['pageSize', 'loadMorePageSize', 'scrollLoad', 'scrollBuffer', 'pageScroll', 'noStopLoadMore', 'negativeLoad', 'animateLoad', 'animateScrollDuration', 'itemHeight', 'animateAfterItems', 'animateAfterDuration', 'minItemsToShow', 'hasScrollbarBuffer'];
 			for(var ii=0; ii<attrsToInt.length; ii++) {
 				attrs[attrsToInt[ii]] =parseInt(attrs[attrsToInt[ii]], 10);
 			}
@@ -204,12 +205,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					//"<div style='position:absolute; z-index:10; right:0; top:60px; background-color:orange;'>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 					//it's important to NOT show any loading stuff until AFTER the check for the scrollbar has been done - since showing text increases/changes the height and when they disappear it could then have no scrollbar anymore!
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (!opts.alwaysShowLoadMorePrevText && scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>"+attrs.loadMorePreviousText+"</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.prev && opts.cursors.itemsView.start <=opts.cursors.items.start) || (opts.cursors.itemsView.start <=0 && !negativeLoad) || (!opts.alwaysShowLoadMorePrevText && scrollLoad && hasScrollbarBuffer)' class='ui-infinitescroll-more' ng-click='loadMoreDir({\"prev\":true})'>"+attrs.loadMorePreviousText+"</div>"+
 					//"<div ng-show='noMoreLoadMoreItemsPrev && queuedItemsPrev.length <1' class='ui-infinitescroll-no-more'>No More Results!</div>"+
 				"</div>"+
 				"<div id='"+attrs.ids.scrollContent+"' class='ui-infinitescroll-content' ng-transclude></div>"+
 				"<div id='"+attrs.ids.contentBottom+"'>"+
-					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (!opts.alwaysShowLoadMoreNextText && scrollLoad && hasScrollbar)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>"+attrs.loadMoreNextText+"</div>"+
+					"<div ng-hide='!trigs.scrollbarChecked || trigs.loading || (noMoreLoadMoreItems.next && opts.cursors.itemsView.end >=opts.cursors.items.end) || (!opts.alwaysShowLoadMoreNextText && scrollLoad && hasScrollbarBuffer)' class='ui-infinitescroll-more' ng-click='loadMoreDir({})'>"+attrs.loadMoreNextText+"</div>"+
 					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} items.length: {{items.length}}</div>"+		//TESTING
 					//"<div>scrollInfo: %fromTop: {{scrollInfo.percentTop}} %fromBot: {{scrollInfo.percentBottom}} pos: {{scrollInfo.scrollPos}} diff: {{scrollInfo.diff}} height: {{scrollInfo.scrollHeight}} viewportHeight: {{scrollInfo.viewportHeight}}</div>"+		//TESTING
 					"<div ng-show='trigs.scrollbarChecked && noMoreLoadMoreItems.next && opts.cursors.items.end <= opts.cursors.itemsView.end' class='ui-infinitescroll-no-more'>"+attrs.noMoreResultsText+"</div>"+
@@ -280,6 +281,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				}
 				
 				$scope.hasScrollbar =false;		//init
+				$scope.hasScrollbarBuffer =false;
 			}
 			
 			var timeoutInfo ={
@@ -909,10 +911,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						}
 						else {
 							$scope.noMoreLoadMoreItems.next =true;
-							//2014.10.06 - not sure why this is here but it's causing issues where load more button disappears when it shouldn't..
-							// if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems) {		//if already loaded previous items, hide prev load more too
-								// $scope.noMoreLoadMoreItems.prev =true;
-							// }
+							//2014.10.06 - not sure why this is here but it's causing issues where load more button disappears when it shouldn't..	//2014.10.08 - DO need it for the case where there's 0 prev items
+							if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems ==0) {		//if already loaded previous items, hide prev load more too
+								$scope.noMoreLoadMoreItems.prev =true;
+							}
 						}
 					}
 				}
@@ -942,6 +944,14 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							else {
 								$scope.hasScrollbar =false;
 							}
+							//do buffer too
+							if(scrollHeight >(viewportHeight +$attrs.hasScrollbarBuffer)) {
+								$scope.hasScrollbarBuffer =true;
+							}
+							else {
+								$scope.hasScrollbarBuffer =false;
+							}
+							
 						}
 						else {
 							var ele =document.getElementById(scrollId);
@@ -954,6 +964,13 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							}
 							else {
 								$scope.hasScrollbar =false;
+							}
+							//do buffer too
+							if(scrollHeight >(viewportHeight +$attrs.hasScrollbarBuffer)) {
+								$scope.hasScrollbarBuffer =true;
+							}
+							else {
+								$scope.hasScrollbarBuffer =false;
 							}
 						}
 						$scope.trigs.scrollbarChecked =true;
