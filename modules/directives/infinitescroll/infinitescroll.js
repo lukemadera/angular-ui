@@ -551,12 +551,19 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				@param {Boolean} [prev] True if loading a previous page (i.e. scrolling up)
 				@param {Number} [diffHeight] Pixels of where to scroll to (instead of just going to middle)
 				@param {Boolean} [alreadyTimedOut] true to avoid infinite loop if already waited for previous items to load
+				@param {Number} [posProportion] 0 to 1 for where to scroll to (0.5 would scroll to middle)
 			*/
 			function scrollToMiddle(params) {
 				// console.log('uiInfinitescroll scrollToMiddle');		//TESTING
 				if(uiInfinitescrollData.exists($attrs.id, {})) {
 					// console.log('uiInfinitescroll scrollToMiddle exists');		//TESTING
-					var scrollPos, scrollHeight, viewportHeight, middle, newMiddle;
+					var scrollPos, scrollHeight, viewportHeight, middle, newMiddle, posProportion;
+					
+					posProportion =0.5;
+					if(params.posProportion) {
+						posProportion =params.posProportion;
+					}
+					
 					if($attrs.pageScroll) {
 						if(0) {		//@todo - need a better solution than this.. see below
 						//if($scope.opts.cursors.itemsView.start ==0) {		//if at top, just go to top (specifically this addresses a double initial load issue that causes the first time to show halfway down rather than at the top - could probably find a better fix - i.e. also check what the last cursor was at?)
@@ -571,7 +578,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							scrollPos =$(window).scrollTop();
 							scrollHeight =$(document).height();
 							viewportHeight =$(window).height();
-							middle =Math.floor((scrollHeight/2) -viewportHeight/2);
+							// middle =Math.floor((scrollHeight/2) -viewportHeight/2);
+							middle =Math.floor((scrollHeight*posProportion) -viewportHeight/2);
 							
 							if(params.diffHeight) {
 								if(params.prev) {
@@ -626,7 +634,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							scrollHeight =ele.scrollHeight;
 							//viewportHeight =$(ele).height();
 							viewportHeight =ele.clientHeight;
-							middle =Math.floor((scrollHeight/2) -viewportHeight/2);
+							// middle =Math.floor((scrollHeight/2) -viewportHeight/2);
+							middle =Math.floor((scrollHeight*posProportion) -viewportHeight/2);
 							
 							if(params.diffHeight) {
 								if(params.prev) {
@@ -752,6 +761,21 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						params1.prev =true;
 					}
 					$scope.loadMoreDir(params1);
+				}
+			});
+			
+			/**
+			Used to programmatically jump to a particular place
+			@toc 5.7.
+			@param {Object} params
+				@param {String} instId Identifies the directive to update (only that one will be re-initialized)
+				// @param {Number} cursor The item to scroll to
+				@param {Number} [posProportion] 0 to 1 for where to scroll to (0.5 would scroll to middle)
+			*/
+			$scope.$on('uiInfinitescrollGoTo', function(evt, params) {
+				if($scope.opts.instId !==undefined && params.instId !==undefined && $scope.opts.instId ==params.instId) {		//only update if the correct instance
+					console.log('uiInfinitescrollGoTo: params: '+JSON.stringify(params));		//TESTING
+					scrollToMiddle(params);
 				}
 			});
 			
@@ -912,7 +936,7 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 						else {
 							$scope.noMoreLoadMoreItems.next =true;
 							//2014.10.06 - not sure why this is here but it's causing issues where load more button disappears when it shouldn't..	//2014.10.08 - DO need it for the case where there's 0 prev items
-							if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems ==0) {		//if already loaded previous items, hide prev load more too
+							if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems ===0) {		//if already loaded previous items, hide prev load more too
 								$scope.noMoreLoadMoreItems.prev =true;
 							}
 						}
