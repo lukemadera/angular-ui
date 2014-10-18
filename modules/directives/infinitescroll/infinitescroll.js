@@ -203,7 +203,8 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			
 			var html="<div class='ui-infinitescroll'>"+
 				"<div class='ui-infinitescroll-top'>"+
-					//"<div>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} negative: {{opts.cursors.negative}} items.length: {{items.length}}</div>"+		//TESTING
+					//"<div style='position:fixed; z-index:9999; max-width:600px; top:20px; background-color:orange;'>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} itemsView.current: {{opts.cursors.itemsView.current}} negative: {{opts.cursors.negative}} items.length: {{items.length}}</div>"+		//TESTING
+					// "<div style='position:fixed; z-index:9999; max-width:600px; top:20px; background-color:orange;'>page: {{page}} cursors: items.start: {{opts.cursors.items.start}} items.end: {{opts.cursors.items.end}} itemsView.start: {{opts.cursors.itemsView.start}} itemsView.end: {{opts.cursors.itemsView.end}} cursorsSave.start: {{cursorsSave.start}} cursorsSave.end: {{cursorsSave.end}}</div>"+		//TESTING
 					//"<div style='position:absolute; z-index:10; right:0; top:60px; background-color:orange;'>hasScrollbar: {{hasScrollbar}} | scrollLoad: {{scrollLoad}}</div>"+		//TESTING
 					//"<div ng-show='itemsFiltered.length <1'>No matches</div>"+
 					//it's important to NOT show any loading stuff until AFTER the check for the scrollbar has been done - since showing text increases/changes the height and when they disappear it could then have no scrollbar anymore!
@@ -248,6 +249,11 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					$scope.opts[xx] =defaultsOpts[xx];
 				}
 			}
+			
+			$scope.cursorsSave ={
+				'start': 0,
+				'end': 0
+			};
 			
 			var scrollId =$attrs.ids.scrollContent;		//default
 			if($scope.opts.scrollId) {
@@ -414,8 +420,11 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			function init(params) {
 				$scope.trigs.loading =true;
 				$scope.trigs.scrollbarChecked =false;
-				//$scope.page =1;		//will store what page (broken up by pageSize attr) we're on
-				$scope.page =Math.floor($scope.opts.cursors.itemsView.current / $attrs.pageSize);
+				$scope.opts.cursors.itemsView.start =$scope.opts.cursors.itemsView.current -$attrs.pageSize;
+				$scope.opts.cursors.itemsView.end =$scope.opts.cursors.itemsView.current +$attrs.pageSize;
+				//save current cursor positions so can calculate change later
+				$scope.cursorsSave.start =$scope.opts.cursors.itemsView.start;
+				$scope.cursorsSave.end =$scope.opts.cursors.itemsView.end;
 				setItemsViewCursor({});
 				
 				setItems({});
@@ -474,20 +483,17 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			function setItems(params) {
 				// console.log('uiInfinitescroll setItems');		//TESTING
 				if(uiInfinitescrollData.exists($attrs.id, {})) {
+					// console.log('cursorsSave: start: '+$scope.cursorsSave.start+' end: '+$scope.cursorsSave.end+' itemsView: start: '+$scope.opts.cursors.itemsView.start+' end: '+$scope.opts.cursors.itemsView.end);		//TESTING
 					// console.log('uiInfinitescroll setItems exists');		//TESTING
-					var cursorSave, diff, height1;
+					var diff =false, height1;
 					var ppSend ={};
 					if($attrs.itemHeight) {		//save current cursor positions so can calculate change later
 						height1 =$attrs.itemHeight;
-						cursorsSave ={
-							'start':$scope.opts.cursors.itemsView.start,
-							'end':$scope.opts.cursors.itemsView.end
-						};
 					}
 					
 					if(params.cursorViewStart !==undefined) {
 						$scope.opts.cursors.itemsView.start =params.cursorViewStart;
-						$scope.opts.cursors.itemsView.end =$scope.opts.cursors.itemsView.start +$attrs.pageSize;
+						$scope.opts.cursors.itemsView.end =$scope.opts.cursors.itemsView.start +$attrs.pageSize *2;
 						if($scope.opts.cursors.itemsView.end >$scope.items.length) {
 							$scope.opts.cursors.itemsView.end =$scope.items.length;
 						}
@@ -498,31 +504,33 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 								$scope.opts.cursors.itemsView.start =0;
 							}
 						}
-						//make sure to set page appropriately so next scroll/load works
-						$scope.page =Math.ceil($scope.opts.cursors.itemsView.start /$attrs.pageSize);
 					}
 					else {
-						$scope.opts.cursors.itemsView.end =$scope.page*$attrs.pageSize +$attrs.pageSize;
+						$scope.opts.cursors.itemsView.end =$scope.opts.cursors.itemsView.start +$attrs.pageSize *2;
 						setItemsViewCursor({});
 					}
 					$scope.itemsView =$scope.items.slice($scope.opts.cursors.itemsView.start, $scope.opts.cursors.itemsView.end);
-					// console.log('$scope.opts.cursors.itemsView.start: '+$scope.opts.cursors.itemsView.start+' $scope.page: '+$scope.page);		//TESTING
+					// console.log('$scope.opts.cursors.itemsView.start: '+$scope.opts.cursors.itemsView.start);		//TESTING
 					
 					if($attrs.itemHeight) {
 						if(params.prev) {
 							ppSend.prev =true;
-							diff =cursorsSave.start -$scope.opts.cursors.itemsView.start;
+							if($scope.opts.cursors.itemsView.start ===0) {
+								diff =$scope.cursorsSave.start -$scope.opts.cursors.itemsView.start;
+							}
 						}
 						else {
 							ppSend.prev =false;
-							diff =$scope.opts.cursors.itemsView.end -cursorsSave.end;
+							diff =$scope.opts.cursors.itemsView.end -$scope.cursorsSave.end;
 						}
-						var diffHeight =diff*height1;
-						if(diffHeight <0) {
-							diffHeight =diffHeight *-1;
+						if(diff) {
+							var diffHeight =diff*height1;
+							if(diffHeight <0) {
+								diffHeight =diffHeight *-1;
+							}
+							//alert('diffHeight: '+diffHeight);
+							ppSend.diffHeight =diffHeight;
 						}
-						//alert('diffHeight: '+diffHeight);
-						ppSend.diffHeight =diffHeight;
 					}
 					
 					if($scope.itemsView.length >=$attrs.pageSize) {		//only scroll if have a full page of items
@@ -530,6 +538,10 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					}
 					checkForScrollBar({});
 					$scope.trigs.loading =false;		//reset
+					
+					//save current cursor positions so can calculate change later
+					$scope.cursorsSave.start =$scope.opts.cursors.itemsView.start;
+					$scope.cursorsSave.end =$scope.opts.cursors.itemsView.end;
 				}
 			}
 			
@@ -537,16 +549,12 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			@toc 1.5.
 			*/
 			function setItemsViewCursor(params) {
-				var end =$scope.page*$attrs.pageSize +$attrs.pageSize;
-				if(end >$scope.items.length) {
-					end =$scope.items.length;
+				if($scope.opts.cursors.itemsView.start <0) {
+					$scope.opts.cursors.itemsView.start =0;
 				}
-				$scope.opts.cursors.itemsView.end =end;
-				var start =$scope.page*$attrs.pageSize -$attrs.pageSize;
-				if(start <0) {
-					start =0;
+				if($scope.opts.cursors.itemsView.end >$scope.items.length) {
+					$scope.opts.cursors.itemsView.end =$scope.items.length;
 				}
-				$scope.opts.cursors.itemsView.start =start;
 			}
 			
 			/**
@@ -794,10 +802,15 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 			*/
 			$scope.loadMoreDir =function(params) {
 				var getMoreItemsTrig =false;
+				var minItems;
 				if(params.prev) {
 					//if have more items left, decrement page & show them
 					if(($scope.opts.cursors.items.start ===0 && $scope.opts.cursors.itemsView.start !==0) || $scope.opts.cursors.items.start < ($scope.opts.cursors.itemsView.start -$attrs.pageSize)) {
-						changePage({'prev':true});
+						$scope.opts.cursors.itemsView.start -=$attrs.pageSize;
+						if($scope.opts.cursors.itemsView.start <0) {
+							$scope.opts.cursors.itemsView.start =0;
+						}
+						setItems({'prev':true});
 					}
 					else {
 						getMoreItemsTrig =true;
@@ -809,7 +822,23 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				else {
 					//if have more items left, increment page & show them
 					if($scope.opts.cursors.items.end > ($scope.opts.cursors.itemsView.end +$attrs.pageSize) || ($scope.noMoreLoadMoreItems.next && $scope.opts.cursors.items.end >$scope.opts.cursors.itemsView.end) ) {
-						changePage({'next':true});
+						if(($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.end) >$attrs.pageSize) {
+							$scope.opts.cursors.itemsView.start +=$attrs.pageSize;
+						}
+						else {
+							$scope.opts.cursors.itemsView.start +=($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.end);
+						}
+						minItems =$attrs.pageSize *2;
+						if(($scope.opts.cursors.items.end -$scope.opts.cursors.items.start) <minItems) {
+							minItems =($scope.opts.cursors.items.end -$scope.opts.cursors.items.start);
+						}
+						if(($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.start) <minItems) {
+							$scope.opts.cursors.itemsView.start -=minItems;
+							if($scope.opts.cursors.itemsView.start <0) {
+								$scope.opts.cursors.itemsView.start =0;
+							}
+						}
+						setItems({'next':true});
 					}
 					else {
 						getMoreItemsTrig =true;
@@ -819,26 +848,6 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 					}
 				}
 			};
-			
-			/**
-			@toc 6.5.
-			@param params
-				prev {Boolean} true if loading previous (i.e. scrolling toward beginning)
-			*/
-			function changePage(params) {
-				if(params.prev) {
-					$scope.page--;
-					/*
-					if($scope.page <0) {		//don't allow negative page
-						$scope.page =0;
-					}
-					*/
-				}
-				else {
-					$scope.page++;
-				}
-				setItems(params);
-			}
 			
 			/**
 			Handles loading items from the queue and calling the external loadMore function to pre-fill the queue for the next page (this is the function that runs AFTER the timeout set in $scope.loadMoreDir function)
@@ -890,11 +899,16 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 				next {Boolean}
 			*/
 			function addLoadMoreItems(results, ppCustom, params) {
+				var minItems;
 				if(results.length >0) {
 					if(params.prev) {
 						$scope.items =results.concat($scope.items);
-						//shift page number up accordingly since added items to beginning
-						$scope.page +=Math.ceil(results.length /$attrs.pageSize);
+						//have more items at beginning so move up by that amount (to get back to the same item we WERE on) and THEN go down 1 page size's worth
+						$scope.opts.cursors.itemsView.start =$scope.opts.cursors.itemsView.start +results.length -$attrs.pageSize;
+						$scope.cursorsSave.start +=results.length;
+						if($scope.opts.cursors.itemsView.start <0) {
+							$scope.opts.cursors.itemsView.start =0;
+						}
 						$scope.opts.cursors.items.start -=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
 						//if negative, reset to 0 and increment opts.cursors.negative
 						if($scope.opts.cursors.items.start <0) {
@@ -902,17 +916,31 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							$scope.opts.cursors.items.end += ($scope.opts.cursors.items.start *-1);		//have to push up items.end the same amount we're removing from items.start
 							$scope.opts.cursors.items.start =0;
 						}
-						changePage(params);
+						setItems(params);
 					}
 					else {
 						$scope.items =$scope.items.concat(results);
 						$scope.opts.cursors.items.end +=results.length;		//don't just add $attrs.loadMorePageSize in case there weren't enough items on the backend (i.e. results could be LESS than this)
+						
+						if(results.length >=$attrs.pageSize) {
+							$scope.opts.cursors.itemsView.start +=$attrs.pageSize;
+						}
+						else {
+							$scope.opts.cursors.itemsView.start +=results.length;
+						}
+						minItems =$attrs.pageSize *2;
+						if(($scope.opts.cursors.items.end -$scope.opts.cursors.items.start) <minItems) {
+							minItems =($scope.opts.cursors.items.end -$scope.opts.cursors.items.start);
+						}
+						if(($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.start) <minItems) {
+							$scope.opts.cursors.itemsView.start -=minItems;
+							if($scope.opts.cursors.itemsView.start <0) {
+								$scope.opts.cursors.itemsView.start =0;
+							}
+						}
+						
 						if(ppCustom !==undefined && ppCustom.numPrevItems !==undefined && ppCustom.numPrevItems) {
 							$scope.opts.cursors.negative -=ppCustom.numPrevItems;
-							//shift page number up accordingly since added items to beginning
-							// console.log('$scope.page before: '+$scope.page);
-							// $scope.page +=Math.ceil(ppCustom.numPrevItems /$attrs.pageSize);
-							// console.log('$scope.page after: '+$scope.page);
 							
 							var ppSend ={
 								cursorViewStart: ppCustom.numPrevItems
@@ -920,13 +948,42 @@ angular.module('ui.directives').directive('uiInfinitescroll', ['ui.config', '$ti
 							setItems(ppSend);		//go to specific item
 						}
 						else {
-							changePage(params);
+							setItems(params);
 						}
 					}
 				}
 				else {
 					if( (params.prev && $scope.opts.cursors.items.start < $scope.opts.cursors.itemsView.start) || (params.next && $scope.opts.cursors.items.end > $scope.opts.cursors.itemsView.end)) {		//display last ones from javascript
-						changePage(params);
+						if(params.prev) {
+							if(($scope.opts.cursors.itemsView.start -$scope.opts.cursors.items.start) >=$attrs.pageSize) {
+								$scope.opts.cursors.itemsView.start -=$attrs.pageSize;
+							}
+							else {
+								$scope.opts.cursors.itemsView.start -=($scope.opts.cursors.itemsView.start -$scope.opts.cursors.items.start);
+							}
+							if($scope.opts.cursors.itemsView.start <0) {
+								$scope.opts.cursors.itemsView.start =0;
+							}
+						}
+						else if(params.next) {
+							if(($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.end) >$attrs.pageSize) {
+								$scope.opts.cursors.itemsView.start +=$attrs.pageSize;
+							}
+							else {
+								$scope.opts.cursors.itemsView.start +=($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.end);
+							}
+							minItems =$attrs.pageSize *2;
+							if(($scope.opts.cursors.items.end -$scope.opts.cursors.items.start) <minItems) {
+								minItems =($scope.opts.cursors.items.end -$scope.opts.cursors.items.start);
+							}
+							if(($scope.opts.cursors.items.end -$scope.opts.cursors.itemsView.start) <minItems) {
+								$scope.opts.cursors.itemsView.start -=minItems;
+								if($scope.opts.cursors.itemsView.start <0) {
+									$scope.opts.cursors.itemsView.start =0;
+								}
+							}
+						}
+						setItems(params);
 					}
 				}
 				
